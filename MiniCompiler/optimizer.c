@@ -1,9 +1,20 @@
 /*
- * File: optimizer.c
- * Developed by: Monir Hossain (ID: 21701009)
- * Contribution: Constant Folding and Dead Code Elimination on TAC
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: constant folding O(n); DCE O(n * u) with u uses (linear scan).
+ * Primary Contributor:
+ * Muznabin Ahmed
+ *
+ * Contributors:
+ * Tanjim Tajwar Arnab
+ * Hafiz Hasnat Sifat Jami
+ * Monir Hossain
+ *
+ * TAC optimization: constant folding, algebraic simplification,
+ * and redundant temporary elimination.
  */
 
 #include "ast.h"
@@ -12,88 +23,43 @@
 #include <string.h>
 #include <ctype.h>
 
-static char *opt_strdup(const char *s) {
-    if (!s) return NULL;
-    size_t n = strlen(s) + 1;
-    char *d = (char *)malloc(n);
-    if (d) memcpy(d, s, n);
-    return d;
-}
-
 static int is_number(const char *s) {
+    int i;
     if (!s || !*s) return 0;
-    if (*s == '-') s++;
-    if (!*s) return 0;
-    while (*s) {
-        if (!isdigit((unsigned char)*s)) return 0;
-        s++;
+    if (*s == '-' && s[1]) i = 1;
+    else i = 0;
+    for (; s[i]; i++) {
+        if (!isdigit((unsigned char)s[i])) return 0;
     }
     return 1;
 }
 
-static int eval_binop(const char *op, int a, int b, int *out) {
-    if (!strcmp(op, "+")) { *out = a + b; return 1; }
-    if (!strcmp(op, "-")) { *out = a - b; return 1; }
-    if (!strcmp(op, "*")) { *out = a * b; return 1; }
-    if (!strcmp(op, "/")) { if (b == 0) return 0; *out = a / b; return 1; }
-    if (!strcmp(op, "<"))  { *out = a < b; return 1; }
-    if (!strcmp(op, ">"))  { *out = a > b; return 1; }
-    if (!strcmp(op, "==")) { *out = a == b; return 1; }
-    if (!strcmp(op, "!=")) { *out = a != b; return 1; }
-    return 0;
+static int to_int(const char *s) {
+    return atoi(s);
 }
 
-/* Constant folding: replace ops on numeric literals with a single assignment */
-static void fold_constants(TACList *tac) {
-    for (TACInstr *p = tac->head; p; p = p->next) {
-        if (p->dead || p->is_label) continue;
-        if (!p->arg1 || !p->arg2 || !p->result) continue;
-        if (!is_number(p->arg1) || !is_number(p->arg2)) continue;
-
-        int a = atoi(p->arg1);
-        int b = atoi(p->arg2);
-        int r = 0;
-        if (!eval_binop(p->op, a, b, &r)) continue;
-
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%d", r);
-        free(p->op);
-        p->op = opt_strdup("=");
-        free(p->arg1);
-        p->arg1 = opt_strdup(buf);
-        free(p->arg2);
-        p->arg2 = NULL;
-    }
-
-    /* unary neg / ! on constants */
-    for (TACInstr *p = tac->head; p; p = p->next) {
-        if (p->dead || p->is_label) continue;
-        if (!p->result || !p->arg1) continue;
-        if (strcmp(p->op, "neg") == 0 && is_number(p->arg1)) {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%d", -atoi(p->arg1));
-            free(p->op);
-            p->op = opt_strdup("=");
-            free(p->arg1);
-            p->arg1 = opt_strdup(buf);
-        } else if (strcmp(p->op, "!") == 0 && is_number(p->arg1)) {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%d", atoi(p->arg1) ? 0 : 1);
-            free(p->op);
-            p->op = opt_strdup("=");
-            free(p->arg1);
-            p->arg1 = opt_strdup(buf);
-        }
-    }
+static char *int_to_str(int v) {
+    char *buf = (char *)malloc(16);
+    if (buf) snprintf(buf, 16, "%d", v);
+    return buf;
 }
 
-static int instr_uses(TACInstr *use, const char *name) {
-    if (!name || !*name) return 0;
-    if (use->arg1 && strcmp(use->arg1, name) == 0) return 1;
-    if (use->arg2 && strcmp(use->arg2, name) == 0) return 1;
-    if (use->op && strcmp(use->op, "if_false") == 0 && use->arg1 &&
-        strcmp(use->arg1, name) == 0)
-        return 1;
+static int eval_binop(const char *op, int a, int b, int *ok) {
+    *ok = 1;
+    if (strcmp(op, "+") == 0) return a + b;
+    if (strcmp(op, "-") == 0) return a - b;
+    if (strcmp(op, "*") == 0) return a * b;
+    if (strcmp(op, "/") == 0) {
+        if (b == 0) { *ok = 0; return 0; }
+        return a / b;
+    }
+    if (strcmp(op, "<") == 0) return a < b;
+    if (strcmp(op, ">") == 0) return a > b;
+    if (strcmp(op, "<=") == 0) return a <= b;
+    if (strcmp(op, ">=") == 0) return a >= b;
+    if (strcmp(op, "==") == 0) return a == b;
+    if (strcmp(op, "!=") == 0) return a != b;
+    *ok = 0;
     return 0;
 }
 
@@ -101,32 +67,167 @@ static int is_temp(const char *s) {
     return s && s[0] == 't' && isdigit((unsigned char)s[1]);
 }
 
-/* Dead code elimination: remove unused temp assignments */
-static void eliminate_dead(TACList *tac) {
-    for (TACInstr *def = tac->head; def; def = def->next) {
-        if (def->dead || def->is_label) continue;
-        if (!def->result || !is_temp(def->result)) continue;
-        if (strcmp(def->op, "=") != 0 &&
-            strcmp(def->op, "+") != 0 && strcmp(def->op, "-") != 0 &&
-            strcmp(def->op, "*") != 0 && strcmp(def->op, "/") != 0 &&
-            strcmp(def->op, "<") != 0 && strcmp(def->op, ">") != 0 &&
-            strcmp(def->op, "==") != 0 && strcmp(def->op, "!=") != 0 &&
-            strcmp(def->op, "&&") != 0 && strcmp(def->op, "||") != 0 &&
-            strcmp(def->op, "neg") != 0 && strcmp(def->op, "!") != 0)
-            continue;
-
-        int used = 0;
-        for (TACInstr *u = def->next; u; u = u->next) {
-            if (u->dead) continue;
-            if (instr_uses(u, def->result)) { used = 1; break; }
-        }
-        if (!used) def->dead = 1;
+static void replace_operand(char *field, const char *from, const char *to) {
+    if (field && from && to && strcmp(field, from) == 0) {
+        strncpy(field, to, sizeof(((TAC *)0)->arg1) - 1);
+        field[sizeof(((TAC *)0)->arg1) - 1] = '\0';
     }
 }
 
-TACList *optimize_tac(TACList *in) {
-    if (!in) return in;
-    fold_constants(in);
-    eliminate_dead(in);
-    return in;
+static void propagate_temp(TACList *list, const char *temp, const char *value) {
+    TAC *cur;
+    for (cur = list->head; cur; cur = cur->next) {
+        replace_operand(cur->arg1, temp, value);
+        replace_operand(cur->arg2, temp, value);
+    }
+}
+
+static int fold_constants(TAC *instr) {
+    int a, b, result, ok;
+    char *res_str;
+
+    if (!instr || instr->arg2[0] == '\0') return 0;
+
+    if (!is_number(instr->arg1) || !is_number(instr->arg2)) return 0;
+
+    a = to_int(instr->arg1);
+    b = to_int(instr->arg2);
+    result = eval_binop(instr->op, a, b, &ok);
+    if (!ok) return 0;
+
+    res_str = int_to_str(result);
+    strncpy(instr->arg1, res_str, sizeof(instr->arg1) - 1);
+    instr->arg2[0] = '\0';
+    strncpy(instr->op, "=", sizeof(instr->op) - 1);
+    free(res_str);
+    return 1;
+}
+
+static int simplify_algebraic(TAC *instr) {
+    if (!instr || instr->arg2[0] == '\0') return 0;
+
+    if (strcmp(instr->op, "+") == 0) {
+        if (strcmp(instr->arg2, "0") == 0) {
+            strncpy(instr->op, "=", sizeof(instr->op) - 1);
+            instr->arg2[0] = '\0';
+            return 1;
+        }
+        if (strcmp(instr->arg1, "0") == 0) {
+            strncpy(instr->arg1, instr->arg2, sizeof(instr->arg1) - 1);
+            strncpy(instr->op, "=", sizeof(instr->op) - 1);
+            instr->arg2[0] = '\0';
+            return 1;
+        }
+    }
+
+    if (strcmp(instr->op, "*") == 0) {
+        if (strcmp(instr->arg2, "1") == 0) {
+            strncpy(instr->op, "=", sizeof(instr->op) - 1);
+            instr->arg2[0] = '\0';
+            return 1;
+        }
+        if (strcmp(instr->arg1, "1") == 0) {
+            strncpy(instr->arg1, instr->arg2, sizeof(instr->arg1) - 1);
+            strncpy(instr->op, "=", sizeof(instr->op) - 1);
+            instr->arg2[0] = '\0';
+            return 1;
+        }
+        if (strcmp(instr->arg2, "0") == 0 || strcmp(instr->arg1, "0") == 0) {
+            strncpy(instr->arg1, "0", sizeof(instr->arg1) - 1);
+            strncpy(instr->op, "=", sizeof(instr->op) - 1);
+            instr->arg2[0] = '\0';
+            return 1;
+        }
+    }
+
+    if (strcmp(instr->op, "-") == 0 && strcmp(instr->arg2, "0") == 0) {
+        strncpy(instr->op, "=", sizeof(instr->op) - 1);
+        instr->arg2[0] = '\0';
+        return 1;
+    }
+
+    if (strcmp(instr->op, "/") == 0 && strcmp(instr->arg2, "1") == 0) {
+        strncpy(instr->op, "=", sizeof(instr->op) - 1);
+        instr->arg2[0] = '\0';
+        return 1;
+    }
+
+    return 0;
+}
+
+static int remove_redundant_temp(TACList *list, TAC *instr, TAC *next) {
+    if (!instr || !next) return 0;
+
+    if (strcmp(instr->op, "=") != 0) return 0;
+    if (!is_temp(instr->result)) return 0;
+    if (strcmp(next->op, "=") != 0) return 0;
+    if (strcmp(next->arg1, instr->result) != 0) return 0;
+
+    propagate_temp(list, instr->result, instr->arg1);
+    instr->result[0] = '\0';
+    instr->op[0] = '\0';
+    return 1;
+}
+
+static void compact_tac_list(TACList *list) {
+    TAC *cur;
+    TAC *prev;
+    TAC *next;
+
+    if (!list) return;
+
+    prev = NULL;
+    cur = list->head;
+    while (cur) {
+        next = cur->next;
+        if (cur->op[0] == '\0') {
+            if (prev) prev->next = next;
+            else list->head = next;
+            if (cur == list->tail) list->tail = prev;
+            free(cur);
+            list->count--;
+        } else {
+            prev = cur;
+        }
+        cur = next;
+    }
+}
+
+void optimizer_run(TACList *list) {
+    TAC *cur;
+    TAC *next;
+    int changed;
+    int pass;
+
+    if (!list) return;
+
+    for (pass = 0; pass < 3; pass++) {
+        changed = 0;
+        for (cur = list->head; cur; cur = cur->next) {
+            if (fold_constants(cur)) changed = 1;
+            if (simplify_algebraic(cur)) changed = 1;
+        }
+        if (!changed) break;
+    }
+
+    for (cur = list->head; cur; cur = cur->next) {
+        next = cur->next;
+        if (remove_redundant_temp(list, cur, next)) {
+            compact_tac_list(list);
+        }
+    }
+
+    for (cur = list->head; cur; cur = cur->next) {
+        if (strcmp(cur->op, "=") == 0 &&
+            is_temp(cur->result) &&
+            !is_temp(cur->arg1) &&
+            cur->next &&
+            strcmp(cur->next->op, "=") == 0 &&
+            strcmp(cur->next->arg1, cur->result) == 0) {
+            propagate_temp(list, cur->result, cur->arg1);
+            cur->result[0] = '\0';
+            cur->op[0] = '\0';
+        }
+    }
+    compact_tac_list(list);
 }

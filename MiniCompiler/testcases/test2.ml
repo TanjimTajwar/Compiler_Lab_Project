@@ -1,12 +1,18 @@
-// test2.ml — if-else and relational operators
-int x;
-int y;
-bool flag;
-x = 5;
-y = 3;
-flag = x > y;
-if (flag) {
-    print(x);
+// test2.ml - While loop and if-else control flow
+
+int i;
+int sum;
+
+i = 0;
+sum = 0;
+
+while (i < 5) {
+    sum = sum + i;
+    i = i + 1;
+}
+
+if (sum > 10) {
+    print(sum);
 } else {
-    print(y);
+    print(0);
 }

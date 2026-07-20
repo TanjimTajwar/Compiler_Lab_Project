@@ -1,395 +1,438 @@
 /*
- * File: ast.c
- * Developed by: Tanjim Tajwar Arnab (ID: 22701066)
- * Contribution: AST Construction, Pretty-Print, Memory Management
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: Each constructor O(1); print_ast/free_ast O(n) nodes.
+ * Primary Contributor:
+ * Muznabin Ahmed
+ *
+ * Contributors:
+ * Tanjim Tajwar Arnab
+ * Hafiz Hasnat Sifat Jami
+ * Monir Hossain
+ *
+ * Abstract Syntax Tree construction and traversal.
  */
 
 #include "ast.h"
 #include <stdlib.h>
 #include <string.h>
 
-int semantic_error_count = 0;
-int syntax_error_count = 0;
-
-static char *strdup_safe(const char *s) {
-    if (!s) return NULL;
-    size_t n = strlen(s) + 1;
-    char *d = (char *)malloc(n);
-    if (d) memcpy(d, s, n);
-    return d;
+StmtList *stmt_list_create(void) {
+    StmtList *list = (StmtList *)calloc(1, sizeof(StmtList));
+    if (!list) return NULL;
+    list->capacity = 8;
+    list->items = (ASTNode **)calloc((size_t)list->capacity, sizeof(ASTNode *));
+    return list;
 }
 
-static ASTNode *mknode(NodeType type, int line) {
-    ASTNode *n = (ASTNode *)calloc(1, sizeof(ASTNode));
-    n->type = type;
-    n->line = line;
-    n->dtype = DTYPE_UNKNOWN;
-    return n;
+void stmt_list_append(StmtList *list, ASTNode *node) {
+    if (!list || !node) return;
+    if (list->count >= list->capacity) {
+        list->capacity *= 2;
+        list->items = (ASTNode **)realloc(list->items,
+                                           (size_t)list->capacity * sizeof(ASTNode *));
+    }
+    list->items[list->count++] = node;
 }
 
-ASTNode *ast_program(ASTNode **stmts, int count, int line) {
-    ASTNode *n = mknode(NODE_PROGRAM, line);
-    n->u.program.stmts = stmts;
-    n->u.program.count = count;
-    return n;
+void stmt_list_free(StmtList *list) {
+    int i;
+    if (!list) return;
+    for (i = 0; i < list->count; i++) {
+        ast_free(list->items[i]);
+    }
+    free(list->items);
+    free(list);
 }
 
-ASTNode *ast_decl(char *name, DataType t, int line) {
-    ASTNode *n = mknode(NODE_DECL, line);
-    n->u.decl.name = name;
-    n->u.decl.decl_type = t;
-    n->dtype = t;
-    return n;
+static ASTNode *ast_alloc(NodeType type, int line) {
+    ASTNode *node = (ASTNode *)calloc(1, sizeof(ASTNode));
+    if (node) {
+        node->type = type;
+        node->line = line;
+        node->data_type = TYPE_UNKNOWN;
+    }
+    return node;
 }
 
-ASTNode *ast_assign(char *name, ASTNode *val, int line) {
-    ASTNode *n = mknode(NODE_ASSIGN, line);
-    n->u.assign.name = name;
-    n->u.assign.value = val;
-    return n;
+ASTNode *ast_program(StmtList *statements, int line) {
+    ASTNode *node = ast_alloc(NODE_PROGRAM, line);
+    if (node) node->u.program.statements = statements;
+    return node;
 }
 
-ASTNode *ast_if(ASTNode *cond, ASTNode *then_b, ASTNode *else_b, int line) {
-    ASTNode *n = mknode(NODE_IF, line);
-    n->u.if_stmt.cond = cond;
-    n->u.if_stmt.then_br = then_b;
-    n->u.if_stmt.else_br = else_b;
-    return n;
+ASTNode *ast_decl(char *name, DataType var_type, int line) {
+    ASTNode *node = ast_alloc(NODE_DECL, line);
+    if (node) {
+        node->u.decl.name = name;
+        node->u.decl.var_type = var_type;
+        node->data_type = var_type;
+    }
+    return node;
 }
 
-ASTNode *ast_while(ASTNode *cond, ASTNode *body, int line) {
-    ASTNode *n = mknode(NODE_WHILE, line);
-    n->u.while_stmt.cond = cond;
-    n->u.while_stmt.body = body;
-    return n;
+ASTNode *ast_assign(char *name, ASTNode *expr, int line) {
+    ASTNode *node = ast_alloc(NODE_ASSIGN, line);
+    if (node) {
+        node->u.assign.name = name;
+        node->u.assign.expr = expr;
+    }
+    return node;
 }
 
-ASTNode *ast_print(ASTNode *expr, int line) {
-    ASTNode *n = mknode(NODE_PRINT, line);
-    n->u.print_stmt.expr = expr;
-    return n;
+ASTNode *ast_if(ASTNode *condition, ASTNode *then_branch,
+                ASTNode *else_branch, int line) {
+    ASTNode *node = ast_alloc(NODE_IF, line);
+    if (node) {
+        node->u.if_stmt.condition = condition;
+        node->u.if_stmt.then_branch = then_branch;
+        node->u.if_stmt.else_branch = else_branch;
+    }
+    return node;
 }
 
-ASTNode *ast_block(ASTNode **stmts, int count, int line) {
-    ASTNode *n = mknode(NODE_BLOCK, line);
-    n->u.block.stmts = stmts;
-    n->u.block.count = count;
-    return n;
+ASTNode *ast_while(ASTNode *condition, ASTNode *body, int line) {
+    ASTNode *node = ast_alloc(NODE_WHILE, line);
+    if (node) {
+        node->u.while_stmt.condition = condition;
+        node->u.while_stmt.body = body;
+    }
+    return node;
 }
 
-ASTNode *ast_binop(BinOpKind op, ASTNode *l, ASTNode *r, int line) {
-    ASTNode *n = mknode(NODE_BINOP, line);
-    n->u.binop.op = op;
-    n->u.binop.left = l;
-    n->u.binop.right = r;
-    return n;
+ASTNode *ast_create_print(ASTNode *expr, int line) {
+    ASTNode *node = ast_alloc(NODE_PRINT, line);
+    if (node) {
+        node->u.print_stmt.expr = expr;
+    }
+    return node;
 }
 
-ASTNode *ast_unop(BinOpKind op, ASTNode *operand, int line) {
-    ASTNode *n = mknode(NODE_UNOP, line);
-    n->u.unop.op = op;
-    n->u.unop.operand = operand;
-    return n;
+ASTNode *ast_block(StmtList *statements, int line) {
+    ASTNode *node = ast_alloc(NODE_BLOCK, line);
+    if (node) node->u.block.statements = statements;
+    return node;
 }
 
-ASTNode *ast_int(int v, int line) {
-    ASTNode *n = mknode(NODE_INT, line);
-    n->u.intval.value = v;
-    n->dtype = DTYPE_INT;
-    return n;
+ASTNode *ast_ident(char *name, int line) {
+    ASTNode *node = ast_alloc(NODE_IDENT, line);
+    if (node) node->u.ident.name = name;
+    return node;
 }
 
-ASTNode *ast_bool(int v, int line) {
-    ASTNode *n = mknode(NODE_BOOL, line);
-    n->u.boolval.value = v ? 1 : 0;
-    n->dtype = DTYPE_BOOL;
-    return n;
+ASTNode *ast_number(int value, int line) {
+    ASTNode *node = ast_alloc(NODE_NUMBER, line);
+    if (node) {
+        node->u.number.value = value;
+        node->data_type = TYPE_INT;
+    }
+    return node;
 }
 
-ASTNode *ast_id(char *name, int line) {
-    ASTNode *n = mknode(NODE_ID, line);
-    n->u.id.name = name;
-    return n;
+ASTNode *ast_binop(BinOpType op, ASTNode *left, ASTNode *right, int line) {
+    ASTNode *node = ast_alloc(NODE_BINOP, line);
+    if (node) {
+        node->u.binop.op = op;
+        node->u.binop.left = left;
+        node->u.binop.right = right;
+        node->data_type = TYPE_INT;
+    }
+    return node;
 }
 
-void ast_set_type(ASTNode *n, DataType t) {
-    if (n) n->dtype = t;
+ASTNode *ast_relop(RelOpType op, ASTNode *left, ASTNode *right, int line) {
+    ASTNode *node = ast_alloc(NODE_RELOP, line);
+    if (node) {
+        node->u.relop.op = op;
+        node->u.relop.left = left;
+        node->u.relop.right = right;
+        node->data_type = TYPE_BOOL;
+    }
+    return node;
 }
 
-static const char *dtype_str(DataType t) {
-    switch (t) {
-        case DTYPE_INT:  return "int";
-        case DTYPE_BOOL: return "bool";
-        default:         return "?";
+ASTNode *ast_unary(UnaryOpType op, ASTNode *operand, int line) {
+    ASTNode *node = ast_alloc(NODE_UNARY, line);
+    if (node) {
+        node->u.unary.op = op;
+        node->u.unary.operand = operand;
+        if (op == UNOP_NOT) {
+            node->data_type = TYPE_BOOL;
+        } else if (operand && operand->data_type != TYPE_UNKNOWN) {
+            node->data_type = operand->data_type;
+        } else {
+            node->data_type = TYPE_INT;
+        }
+    }
+    return node;
+}
+
+ASTNode *ast_stmt_list(StmtList *statements, int line) {
+    ASTNode *node = ast_alloc(NODE_STMT_LIST, line);
+    if (node) node->u.stmt_list.statements = statements;
+    return node;
+}
+
+const char *data_type_to_string(DataType type) {
+    switch (type) {
+        case TYPE_INT:  return "int";
+        case TYPE_BOOL: return "bool";
+        default:        return "unknown";
     }
 }
 
-static const char *op_str(BinOpKind op) {
+const char *binop_to_string(BinOpType op) {
     switch (op) {
         case OP_ADD: return "+";
         case OP_SUB: return "-";
         case OP_MUL: return "*";
         case OP_DIV: return "/";
-        case OP_LT:  return "<";
-        case OP_GT:  return ">";
-        case OP_EQ:  return "==";
-        case OP_NE:  return "!=";
-        case OP_AND: return "&&";
-        case OP_OR:  return "||";
-        case OP_NOT: return "!";
-        case OP_NEG: return "-";
         default:     return "?";
     }
 }
 
-static void indent_print(int indent) {
-    for (int i = 0; i < indent; i++) putchar(' ');
+const char *relop_to_string(RelOpType op) {
+    switch (op) {
+        case REL_LT: return "<";
+        case REL_GT: return ">";
+        case REL_LE: return "<=";
+        case REL_GE: return ">=";
+        case REL_EQ: return "==";
+        case REL_NE: return "!=";
+        default:     return "?";
+    }
 }
 
-static void print_ast_rec(ASTNode *n, int indent) {
-    if (!n) return;
-    indent_print(indent);
-    printf("[L%d] ", n->line);
+static void print_indent(int indent) {
+    int i;
+    for (i = 0; i < indent; i++) printf("  ");
+}
 
-    switch (n->type) {
+static void ast_print_stmt_list(StmtList *list, int indent);
+
+void ast_print(ASTNode *node, int indent) {
+    if (!node) return;
+
+    print_indent(indent);
+
+    switch (node->type) {
         case NODE_PROGRAM:
-            printf("PROGRAM (%d stmts)\n", n->u.program.count);
-            for (int i = 0; i < n->u.program.count; i++)
-                print_ast_rec(n->u.program.stmts[i], indent + 2);
+            printf("PROGRAM (line %d)\n", node->line);
+            ast_print_stmt_list(node->u.program.statements, indent + 1);
             break;
+
         case NODE_DECL:
-            printf("DECL %s : %s\n", n->u.decl.name, dtype_str(n->u.decl.decl_type));
+            printf("DECL %s : %s (line %d)\n",
+                   node->u.decl.name,
+                   data_type_to_string(node->u.decl.var_type),
+                   node->line);
             break;
+
         case NODE_ASSIGN:
-            printf("ASSIGN %s\n", n->u.assign.name);
-            print_ast_rec(n->u.assign.value, indent + 2);
+            printf("ASSIGN %s (line %d)\n", node->u.assign.name, node->line);
+            ast_print(node->u.assign.expr, indent + 1);
             break;
+
         case NODE_IF:
-            printf("IF\n");
-            print_ast_rec(n->u.if_stmt.cond, indent + 2);
-            indent_print(indent + 2); printf("THEN\n");
-            print_ast_rec(n->u.if_stmt.then_br, indent + 4);
-            if (n->u.if_stmt.else_br) {
-                indent_print(indent + 2); printf("ELSE\n");
-                print_ast_rec(n->u.if_stmt.else_br, indent + 4);
+            printf("IF (line %d)\n", node->line);
+            ast_print(node->u.if_stmt.condition, indent + 1);
+            ast_print(node->u.if_stmt.then_branch, indent + 1);
+            if (node->u.if_stmt.else_branch) {
+                print_indent(indent + 1);
+                printf("ELSE\n");
+                ast_print(node->u.if_stmt.else_branch, indent + 2);
             }
             break;
+
         case NODE_WHILE:
-            printf("WHILE\n");
-            print_ast_rec(n->u.while_stmt.cond, indent + 2);
-            print_ast_rec(n->u.while_stmt.body, indent + 2);
+            printf("WHILE (line %d)\n", node->line);
+            ast_print(node->u.while_stmt.condition, indent + 1);
+            ast_print(node->u.while_stmt.body, indent + 1);
             break;
+
         case NODE_PRINT:
-            printf("PRINT\n");
-            print_ast_rec(n->u.print_stmt.expr, indent + 2);
+            printf("PRINT (line %d)\n", node->line);
+            ast_print(node->u.print_stmt.expr, indent + 1);
             break;
+
         case NODE_BLOCK:
-            printf("BLOCK (%d)\n", n->u.block.count);
-            for (int i = 0; i < n->u.block.count; i++)
-                print_ast_rec(n->u.block.stmts[i], indent + 2);
+            printf("BLOCK (line %d)\n", node->line);
+            ast_print_stmt_list(node->u.block.statements, indent + 1);
             break;
+
+        case NODE_IDENT:
+            printf("IDENT %s (line %d)\n", node->u.ident.name, node->line);
+            break;
+
+        case NODE_NUMBER:
+            printf("NUMBER %d (line %d)\n", node->u.number.value, node->line);
+            break;
+
         case NODE_BINOP:
-            printf("BINOP %s <%s>\n", op_str(n->u.binop.op), dtype_str(n->dtype));
-            print_ast_rec(n->u.binop.left, indent + 2);
-            print_ast_rec(n->u.binop.right, indent + 2);
+            printf("BINOP %s (line %d)\n", binop_to_string(node->u.binop.op), node->line);
+            ast_print(node->u.binop.left, indent + 1);
+            ast_print(node->u.binop.right, indent + 1);
             break;
-        case NODE_UNOP:
-            printf("UNOP %s <%s>\n", op_str(n->u.unop.op), dtype_str(n->dtype));
-            print_ast_rec(n->u.unop.operand, indent + 2);
+
+        case NODE_RELOP:
+            printf("RELOP %s (line %d)\n", relop_to_string(node->u.relop.op), node->line);
+            ast_print(node->u.relop.left, indent + 1);
+            ast_print(node->u.relop.right, indent + 1);
             break;
-        case NODE_INT:
-            printf("INT %d\n", n->u.intval.value);
+
+        case NODE_UNARY:
+            printf("UNARY %s (line %d)\n",
+                   node->u.unary.op == UNOP_NEG ? "-" : "!", node->line);
+            ast_print(node->u.unary.operand, indent + 1);
             break;
-        case NODE_BOOL:
-            printf("BOOL %s\n", n->u.boolval.value ? "true" : "false");
+
+        case NODE_STMT_LIST:
+            ast_print_stmt_list(node->u.stmt_list.statements, indent);
             break;
-        case NODE_ID:
-            printf("ID %s <%s>\n", n->u.id.name, dtype_str(n->dtype));
-            break;
+
         default:
-            printf("UNKNOWN\n");
+            printf("UNKNOWN NODE (line %d)\n", node->line);
             break;
     }
 }
 
-void print_ast(ASTNode *root, int indent) {
-    if (!root) {
-        printf("(empty AST)\n");
-        return;
+static void ast_print_stmt_list(StmtList *list, int indent) {
+    int i;
+    if (!list) return;
+    for (i = 0; i < list->count; i++) {
+        ast_print(list->items[i], indent);
     }
-    printf("=== Abstract Syntax Tree ===\n");
-    print_ast_rec(root, indent);
-    printf("============================\n");
 }
 
-static void free_stmt_list(ASTNode **stmts, int count) {
-    for (int i = 0; i < count; i++) free_ast(stmts[i]);
-    free(stmts);
-}
+void ast_free(ASTNode *node) {
+    if (!node) return;
 
-void free_ast(ASTNode *n) {
-    if (!n) return;
-    switch (n->type) {
+    switch (node->type) {
         case NODE_PROGRAM:
-            free_stmt_list(n->u.program.stmts, n->u.program.count);
+            stmt_list_free(node->u.program.statements);
             break;
         case NODE_DECL:
-            free(n->u.decl.name);
+            free(node->u.decl.name);
             break;
         case NODE_ASSIGN:
-            free(n->u.assign.name);
-            free_ast(n->u.assign.value);
+            free(node->u.assign.name);
+            ast_free(node->u.assign.expr);
             break;
         case NODE_IF:
-            free_ast(n->u.if_stmt.cond);
-            free_ast(n->u.if_stmt.then_br);
-            if (n->u.if_stmt.else_br)
-                free_ast(n->u.if_stmt.else_br);
+            ast_free(node->u.if_stmt.condition);
+            ast_free(node->u.if_stmt.then_branch);
+            ast_free(node->u.if_stmt.else_branch);
             break;
         case NODE_WHILE:
-            free_ast(n->u.while_stmt.cond);
-            free_ast(n->u.while_stmt.body);
+            ast_free(node->u.while_stmt.condition);
+            ast_free(node->u.while_stmt.body);
             break;
         case NODE_PRINT:
-            free_ast(n->u.print_stmt.expr);
+            ast_free(node->u.print_stmt.expr);
             break;
         case NODE_BLOCK:
-            free_stmt_list(n->u.block.stmts, n->u.block.count);
+            stmt_list_free(node->u.block.statements);
+            break;
+        case NODE_IDENT:
+            free(node->u.ident.name);
             break;
         case NODE_BINOP:
-            free_ast(n->u.binop.left);
-            free_ast(n->u.binop.right);
+            ast_free(node->u.binop.left);
+            ast_free(node->u.binop.right);
             break;
-        case NODE_UNOP:
-            free_ast(n->u.unop.operand);
+        case NODE_RELOP:
+            ast_free(node->u.relop.left);
+            ast_free(node->u.relop.right);
             break;
-        case NODE_ID:
-            free(n->u.id.name);
+        case NODE_UNARY:
+            ast_free(node->u.unary.operand);
+            break;
+        case NODE_STMT_LIST:
+            stmt_list_free(node->u.stmt_list.statements);
             break;
         default:
             break;
     }
-    free(n);
+    free(node);
 }
 
-/* ---------- TAC helpers ---------- */
-TACList *tac_create(void) {
-    TACList *t = (TACList *)calloc(1, sizeof(TACList));
-    return t;
+TACList *tac_list_create(void) {
+    return (TACList *)calloc(1, sizeof(TACList));
 }
 
-char *tac_new_temp(TACList *t) {
-    char buf[32];
-    snprintf(buf, sizeof(buf), "t%d", t->temp_count++);
-    return strdup_safe(buf);
-}
+TAC *tac_emit(TACList *list, const char *op, const char *arg1,
+              const char *arg2, const char *result) {
+    TAC *instr;
 
-char *tac_new_label(TACList *t) {
-    char buf[32];
-    snprintf(buf, sizeof(buf), "L%d", t->label_count++);
-    return strdup_safe(buf);
-}
+    if (!list) return NULL;
 
-static TACInstr *mk_instr(int line, const char *op,
-                          const char *a1, const char *a2, const char *res) {
-    TACInstr *in = (TACInstr *)calloc(1, sizeof(TACInstr));
-    in->line = line;
-    in->op = strdup_safe(op);
-    in->arg1 = strdup_safe(a1);
-    in->arg2 = strdup_safe(a2);
-    in->result = strdup_safe(res);
-    return in;
-}
+    instr = (TAC *)calloc(1, sizeof(TAC));
+    if (!instr) return NULL;
 
-void tac_emit(TACList *t, int line, const char *op,
-              const char *a1, const char *a2, const char *res) {
-    TACInstr *in = mk_instr(line, op, a1, a2, res);
-    in->index = t->count++;
-    if (!t->head) {
-        t->head = t->tail = in;
+    if (op)     strncpy(instr->op, op, sizeof(instr->op) - 1);
+    if (arg1)   strncpy(instr->arg1, arg1, sizeof(instr->arg1) - 1);
+    if (arg2)   strncpy(instr->arg2, arg2, sizeof(instr->arg2) - 1);
+    if (result) strncpy(instr->result, result, sizeof(instr->result) - 1);
+
+    if (!list->head) {
+        list->head = instr;
+        list->tail = instr;
     } else {
-        t->tail->next = in;
-        t->tail = in;
+        list->tail->next = instr;
+        list->tail = instr;
     }
+    list->count++;
+    return instr;
 }
 
-void tac_emit_label(TACList *t, int line, const char *label) {
-    TACInstr *in = mk_instr(line, "LABEL", NULL, NULL, label);
-    in->is_label = 1;
-    in->index = t->count++;
-    if (!t->head) t->head = t->tail = in;
-    else { t->tail->next = in; t->tail = in; }
-}
-
-void tac_free(TACList *t) {
-    if (!t) return;
-    TACInstr *cur = t->head;
+void tac_list_free(TACList *list) {
+    TAC *cur;
+    TAC *next;
+    if (!list) return;
+    cur = list->head;
     while (cur) {
-        TACInstr *n = cur->next;
-        free(cur->op);
-        free(cur->arg1);
-        free(cur->arg2);
-        free(cur->result);
+        next = cur->next;
         free(cur);
-        cur = n;
+        cur = next;
     }
-    free(t);
+    free(list);
 }
 
-void tac_print(FILE *fp, TACList *t) {
-    if (!t) return;
-    fprintf(fp, "; Three Address Code (MiniLang Compiler)\n");
-    for (TACInstr *p = t->head; p; p = p->next) {
-        if (p->dead) continue;
-        if (p->is_label) {
-            fprintf(fp, "%s:\n", p->result ? p->result : "");
-            continue;
-        }
-        fprintf(fp, "%d: ", p->index);
-        if (p->op && !strcmp(p->op, "=") && p->result && p->arg1) {
-            fprintf(fp, "%s = %s\n", p->result, p->arg1);
-            continue;
-        }
-        if (p->op && !strcmp(p->op, "goto") && p->result) {
-            fprintf(fp, "goto %s\n", p->result);
-            continue;
-        }
-        if (p->op && !strcmp(p->op, "if_false") && p->arg1 && p->result) {
-            fprintf(fp, "if_false %s goto %s\n", p->arg1, p->result);
-            continue;
-        }
-        if (p->op && !strcmp(p->op, "param") && p->arg1) {
-            fprintf(fp, "param %s\n", p->arg1);
-            continue;
-        }
-        if (p->op && !strcmp(p->op, "call")) {
-            fprintf(fp, "call %s", p->arg1 ? p->arg1 : "");
-            if (p->arg2) fprintf(fp, ", %s", p->arg2);
-            fprintf(fp, "\n");
-            continue;
-        }
-        if (p->op && !strcmp(p->op, "halt")) {
-            fprintf(fp, "halt\n");
-            continue;
-        }
-        if (p->result && p->result[0])
-            fprintf(fp, "%s = ", p->result);
-        fprintf(fp, "%s", p->op ? p->op : "");
-        if (p->arg1 && p->arg1[0]) fprintf(fp, " %s", p->arg1);
-        if (p->arg2 && p->arg2[0]) fprintf(fp, ", %s", p->arg2);
-        fprintf(fp, "\n");
-    }
-}
+void tac_print(TACList *list, FILE *out) {
+    TAC *cur;
+    if (!list || !out) return;
 
-int tac_save(const char *path, TACList *t) {
-    FILE *fp = fopen(path, "w");
-    if (!fp) {
-        perror("output.tac");
-        return -1;
+    for (cur = list->head; cur; cur = cur->next) {
+        if (strcmp(cur->op, "label") == 0) {
+            fprintf(out, "%s:\n", cur->result);
+            continue;
+        }
+        if (strcmp(cur->op, "goto") == 0) {
+            fprintf(out, "goto %s\n", cur->result);
+            continue;
+        }
+        if (strcmp(cur->op, "ifFalse") == 0) {
+            fprintf(out, "ifFalse %s goto %s\n", cur->arg1, cur->result);
+            continue;
+        }
+        if (strcmp(cur->op, "ifTrue") == 0) {
+            fprintf(out, "ifTrue %s goto %s\n", cur->arg1, cur->result);
+            continue;
+        }
+        if (strcmp(cur->op, "print") == 0) {
+            fprintf(out, "print %s\n", cur->arg1);
+            continue;
+        }
+        if (cur->arg2[0] != '\0') {
+            fprintf(out, "%s = %s %s %s\n",
+                    cur->result, cur->arg1, cur->op, cur->arg2);
+        } else if (cur->arg1[0] != '\0') {
+            fprintf(out, "%s = %s\n", cur->result, cur->arg1);
+        } else {
+            fprintf(out, "%s\n", cur->op);
+        }
     }
-    tac_print(fp, t);
-    fclose(fp);
-    return 0;
 }

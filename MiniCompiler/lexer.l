@@ -1,9 +1,19 @@
 /*
- * File: lexer.l
- * Developed by: Sabrina Sultana (ID: 22701067)
- * Contribution: Lexical Analysis, Token Definitions, Line Tracking
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: O(n) over input length n (single pass DFA scan).
+ * Primary Contributor:
+ * Tanjim Tajwar Arnab
+ *
+ * Contributors:
+ * Hafiz Hasnat Sifat Jami
+ * Muznabin Ahmed
+ * Monir Hossain
+ *
+ * Flex lexical analyzer for MiniLang.
  */
 
 %{
@@ -11,76 +21,77 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "errors.h"
 #include "parser.tab.h"
 
-extern int syntax_error_count;
 extern YYSTYPE yylval;
-extern int yylineno;
+extern int parse_error_flag;
 
-static char *strdup_lex(const char *s) {
-    size_t n = strlen(s) + 1;
-    char *d = (char *)malloc(n);
-    if (d) memcpy(d, s, n);
-    return d;
-}
-
-static void lex_error(const char *msg) {
-    fprintf(stderr, "Lexical error at line %d: %s\n", yylineno, msg);
-    fprintf(stderr, "  Suggestion: check for invalid characters or unclosed strings.\n");
-    syntax_error_count++;
+static char *strdup_safe(const char *s) {
+    size_t len = strlen(s) + 1;
+    char *copy = (char *)malloc(len);
+    if (copy) memcpy(copy, s, len);
+    return copy;
 }
 %}
 
-%option noyywrap
 %option yylineno
-%option nounput
-%option noinput
+%option noyywrap
 
 DIGIT       [0-9]
 LETTER      [a-zA-Z_]
 ID          {LETTER}({LETTER}|{DIGIT})*
+INTEGER     {DIGIT}+
 
 %%
 
-[ \t\r]+             ;   /* skip whitespace */
-\n                   ;   /* lineno handled by flex */
+"int"           { return INT; }
+"bool"          { return BOOL; }
+"if"            { return IF; }
+"else"          { return ELSE; }
+"while"         { return WHILE; }
+"print"         { return PRINT; }
 
-"//".*               ;   /* single-line comment */
-"/\*"([^*]|\*+[^*/])*\*+"/" ;  /* block comment */
+{ID}            {
+                    yylval.sval = strdup_safe(yytext);
+                    return IDENTIFIER;
+                }
 
-"int"                { return INT; }
-"bool"               { return BOOL; }
-"if"                 { return IF; }
-"else"               { return ELSE; }
-"while"              { return WHILE; }
-"print"              { return PRINT; }
-"true"               { yylval.ival = 1; return TRUE_LIT; }
-"false"              { yylval.ival = 0; return FALSE_LIT; }
+{INTEGER}       {
+                    yylval.ival = atoi(yytext);
+                    return INTEGER;
+                }
 
-"+"                  { return PLUS; }
-"-"                  { return MINUS; }
-"*"                  { return STAR; }
-"/"                  { return SLASH; }
-"<"                  { return LT; }
-">"                  { return GT; }
-"=="                 { return EQ; }
-"!="                 { return NE; }
-"&&"                 { return AND; }
-"||"                 { return OR; }
-"!"                  { return NOT; }
+"<="            { return LE; }
+">="            { return GE; }
+"=="            { return EQ; }
+"!="            { return NE; }
+"<"             { return LT; }
+">"             { return GT; }
 
-"="                  { return ASSIGN; }
-";"                  { return SEMI; }
-"("                  { return LPAREN; }
-")"                  { return RPAREN; }
-"{"                  { return LBRACE; }
-"}"                  { return RBRACE; }
+"+"             { return PLUS; }
+"-"             { return MINUS; }
+"*"             { return STAR; }
+"/"             { return SLASH; }
+"!"             { return NOT; }
 
-{ID}                 { yylval.sval = strdup_lex(yytext); return IDENT; }
-{DIGIT}+             { yylval.ival = atoi(yytext); return INT_LIT; }
+"="             { return ASSIGN; }
+";"             { return SEMICOLON; }
+","             { return COMMA; }
+"("             { return LPAREN; }
+")"             { return RPAREN; }
+"{"             { return LBRACE; }
+"}"             { return RBRACE; }
 
-.                    { char buf[128];
-                       snprintf(buf, sizeof(buf), "unexpected character '%s'", yytext);
-                       lex_error(buf); }
+"//".*          { /* single-line comment */ }
+"/*"([^*]|\*+[^*/])*\*+"/" { /* multi-line comment */ }
+
+[ \t\r\n]+      { /* ignore whitespace */ }
+
+.               {
+                    error_report(ERR_LEXICAL, yylineno,
+                                 "Invalid character '%s'", yytext);
+                    return yytext[0];
+                }
 
 %%

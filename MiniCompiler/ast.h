@@ -1,10 +1,19 @@
 /*
- * File: ast.h
- * Developed by: Tanjim Tajwar Arnab (ID: 22701066)
- * Contribution: AST Design, Core Data Structures, Integration Headers
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: AST node creation O(1) per node; pretty-print O(n) for n nodes;
- *             free_ast O(n).
+ * Primary Contributor:
+ * Muznabin Ahmed
+ *
+ * Contributors:
+ * Tanjim Tajwar Arnab
+ * Hafiz Hasnat Sifat Jami
+ * Monir Hossain
+ *
+ * Abstract Syntax Tree definitions and traversal interface.
  */
 
 #ifndef AST_H
@@ -12,9 +21,14 @@
 
 #include <stdio.h>
 
-/* ---------- Types ---------- */
-typedef enum { DTYPE_INT, DTYPE_BOOL, DTYPE_UNKNOWN } DataType;
+/* Data types supported by MiniLang */
+typedef enum {
+    TYPE_INT,
+    TYPE_BOOL,
+    TYPE_UNKNOWN
+} DataType;
 
+/* AST node kinds */
 typedef enum {
     NODE_PROGRAM,
     NODE_DECL,
@@ -23,139 +37,166 @@ typedef enum {
     NODE_WHILE,
     NODE_PRINT,
     NODE_BLOCK,
+    NODE_IDENT,
+    NODE_NUMBER,
     NODE_BINOP,
-    NODE_UNOP,
-    NODE_INT,
-    NODE_BOOL,
-    NODE_ID
+    NODE_RELOP,
+    NODE_UNARY,
+    NODE_STMT_LIST
 } NodeType;
 
+/* Binary operators */
 typedef enum {
-    OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-    OP_LT, OP_GT, OP_EQ, OP_NE,
-    OP_AND, OP_OR, OP_NOT,
-    OP_NEG
-} BinOpKind;
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV
+} BinOpType;
 
-/* ---------- AST Node ---------- */
-typedef struct {
-    struct ASTNode **nlist;
+/* Relational operators */
+typedef enum {
+    REL_LT,
+    REL_GT,
+    REL_LE,
+    REL_GE,
+    REL_EQ,
+    REL_NE
+} RelOpType;
+
+/* Unary operators */
+typedef enum {
+    UNOP_NEG,
+    UNOP_NOT
+} UnaryOpType;
+
+/* Forward declaration */
+struct ASTNode;
+
+/* Statement list container */
+typedef struct StmtList {
+    struct ASTNode **items;
     int count;
-} NodeList;
+    int capacity;
+} StmtList;
 
+/* AST node structure */
 typedef struct ASTNode {
     NodeType type;
     int line;
-    DataType dtype;
+    DataType data_type;
 
     union {
-        struct { struct ASTNode **stmts; int count; } program;
-        struct { char *name; DataType decl_type; } decl;
-        struct { char *name; struct ASTNode *value; } assign;
         struct {
-            struct ASTNode *cond;
-            struct ASTNode *then_br;
-            struct ASTNode *else_br;
+            StmtList *statements;
+        } program;
+
+        struct {
+            char *name;
+            DataType var_type;
+        } decl;
+
+        struct {
+            char *name;
+            struct ASTNode *expr;
+        } assign;
+
+        struct {
+            struct ASTNode *condition;
+            struct ASTNode *then_branch;
+            struct ASTNode *else_branch;
         } if_stmt;
-        struct { struct ASTNode *cond; struct ASTNode *body; } while_stmt;
-        struct { struct ASTNode *expr; } print_stmt;
-        struct { struct ASTNode **stmts; int count; } block;
+
         struct {
-            BinOpKind op;
+            struct ASTNode *condition;
+            struct ASTNode *body;
+        } while_stmt;
+
+        struct {
+            struct ASTNode *expr;
+        } print_stmt;
+
+        struct {
+            StmtList *statements;
+        } block;
+
+        struct {
+            char *name;
+        } ident;
+
+        struct {
+            int value;
+        } number;
+
+        struct {
+            BinOpType op;
             struct ASTNode *left;
             struct ASTNode *right;
         } binop;
-        struct { BinOpKind op; struct ASTNode *operand; } unop;
-        struct { int value; } intval;
-        struct { int value; } boolval;
-        struct { char *name; } id;
+
+        struct {
+            RelOpType op;
+            struct ASTNode *left;
+            struct ASTNode *right;
+        } relop;
+
+        struct {
+            UnaryOpType op;
+            struct ASTNode *operand;
+        } unary;
+
+        struct {
+            StmtList *statements;
+        } stmt_list;
     } u;
 } ASTNode;
 
-/* ---------- TAC (Three Address Code) ---------- */
-typedef struct TACInstr {
-    int index;
-    int line;
-    char *op;
-    char *arg1;
-    char *arg2;
-    char *result;
-    int is_label;       /* 1 if result holds label name */
-    int dead;           /* marked by optimizer */
-    struct TACInstr *next;
-} TACInstr;
+/* Three-address code instruction */
+typedef struct TAC {
+    char op[16];
+    char arg1[64];
+    char arg2[64];
+    char result[64];
+    struct TAC *next;
+} TAC;
 
-typedef struct {
-    TACInstr *head;
-    TACInstr *tail;
+/* TAC list container */
+typedef struct TACList {
+    TAC *head;
+    TAC *tail;
     int count;
-    int temp_count;
-    int label_count;
 } TACList;
 
-/* ---------- Symbol Table (API used across modules) ---------- */
-typedef struct Symbol {
-    char *name;
-    DataType type;
-    int scope_level;
-    int line_declared;
-    struct Symbol *next;
-} Symbol;
+/* AST construction */
+StmtList *stmt_list_create(void);
+void stmt_list_append(StmtList *list, ASTNode *node);
+ASTNode *ast_program(StmtList *statements, int line);
+ASTNode *ast_decl(char *name, DataType var_type, int line);
+ASTNode *ast_assign(char *name, ASTNode *expr, int line);
+ASTNode *ast_if(ASTNode *condition, ASTNode *then_branch, ASTNode *else_branch, int line);
+ASTNode *ast_while(ASTNode *condition, ASTNode *body, int line);
+ASTNode *ast_create_print(ASTNode *expr, int line);
+ASTNode *ast_block(StmtList *statements, int line);
+ASTNode *ast_ident(char *name, int line);
+ASTNode *ast_number(int value, int line);
+ASTNode *ast_binop(BinOpType op, ASTNode *left, ASTNode *right, int line);
+ASTNode *ast_relop(RelOpType op, ASTNode *left, ASTNode *right, int line);
+ASTNode *ast_unary(UnaryOpType op, ASTNode *operand, int line);
+ASTNode *ast_stmt_list(StmtList *statements, int line);
 
-typedef struct Scope {
-    Symbol *symbols;
-    int level;
-    struct Scope *parent;
-} Scope;
+/* AST traversal and cleanup */
+void ast_print(ASTNode *node, int indent);
+void ast_free(ASTNode *node);
+void stmt_list_free(StmtList *list);
 
-/* ---------- Global flags ---------- */
-extern int semantic_error_count;
-extern int syntax_error_count;
-extern ASTNode *g_ast_root;
+const char *data_type_to_string(DataType type);
+const char *binop_to_string(BinOpType op);
+const char *relop_to_string(RelOpType op);
 
-/* ---------- AST API ---------- */
-ASTNode *ast_program(ASTNode **stmts, int count, int line);
-ASTNode *ast_decl(char *name, DataType t, int line);
-ASTNode *ast_assign(char *name, ASTNode *val, int line);
-ASTNode *ast_if(ASTNode *cond, ASTNode *then_b, ASTNode *else_b, int line);
-ASTNode *ast_while(ASTNode *cond, ASTNode *body, int line);
-ASTNode *ast_print(ASTNode *expr, int line);
-ASTNode *ast_block(ASTNode **stmts, int count, int line);
-ASTNode *ast_binop(BinOpKind op, ASTNode *l, ASTNode *r, int line);
-ASTNode *ast_unop(BinOpKind op, ASTNode *operand, int line);
-ASTNode *ast_int(int v, int line);
-ASTNode *ast_bool(int v, int line);
-ASTNode *ast_id(char *name, int line);
-
-void ast_set_type(ASTNode *n, DataType t);
-void print_ast(ASTNode *root, int indent);
-void free_ast(ASTNode *root);
-
-/* ---------- TAC API ---------- */
-TACList *tac_create(void);
-char *tac_new_temp(TACList *t);
-char *tac_new_label(TACList *t);
-void tac_emit(TACList *t, int line, const char *op,
-              const char *a1, const char *a2, const char *res);
-void tac_emit_label(TACList *t, int line, const char *label);
-void tac_free(TACList *t);
-void tac_print(FILE *fp, TACList *t);
-int tac_save(const char *path, TACList *t);
-
-/* ---------- Symbol Table API ---------- */
-void symtab_init(void);
-void symtab_enter_scope(void);
-void symtab_exit_scope(void);
-int symtab_insert(char *name, DataType type, int line);
-Symbol *symtab_lookup(char *name);
-Symbol *symtab_lookup_current(char *name);
-void symtab_print(void);
-void symtab_free(void);
-
-/* ---------- Phase APIs ---------- */
-int semantic_analyze(ASTNode *root);
-TACList *codegen_generate(ASTNode *root);
-TACList *optimize_tac(TACList *in);
-int target_generate(TACList *tac, const char *path);
+/* TAC list helpers */
+TACList *tac_list_create(void);
+TAC *tac_emit(TACList *list, const char *op, const char *arg1,
+              const char *arg2, const char *result);
+void tac_list_free(TACList *list);
+void tac_print(TACList *list, FILE *out);
 
 #endif /* AST_H */

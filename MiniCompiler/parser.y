@@ -1,9 +1,19 @@
 /*
- * File: parser.y
- * Developed by: Hafiz Hasnat Sifat Jami (ID: 22701068)
- * Contribution: Syntax Analysis, Grammar Rules, AST Construction
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: O(n) for n tokens (LALR parse); AST build O(n).
+ * Primary Contributor:
+ * Hafiz Hasnat Sifat Jami
+ *
+ * Contributors:
+ * Tanjim Tajwar Arnab
+ * Muznabin Ahmed
+ * Monir Hossain
+ *
+ * Bison parser for MiniLang with AST construction.
  */
 
 %{
@@ -11,166 +21,214 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "errors.h"
 
-extern int yylineno;
 extern int yylex(void);
-extern int yydebug;
-extern int syntax_error_count;
+extern int yylineno;
+extern FILE *yyin;
 
 void yyerror(const char *s);
-ASTNode *g_ast_root = NULL;
 
-static char *dup_str(const char *s) {
-    size_t n = strlen(s) + 1;
-    char *d = (char *)malloc(n);
-    if (d) memcpy(d, s, n);
-    return d;
-}
+ASTNode *ast_root = NULL;
+int parse_error_flag = 0;
 %}
 
-/* win_bison / classic bison: use yylineno in actions (no %locations) */
+%define parse.error verbose
+%locations
 
 %union {
     int ival;
     char *sval;
+    DataType dtype;
     ASTNode *node;
-    NodeList nlist;
+    StmtList *stmt_list;
+    BinOpType bop;
+    RelOpType rop;
+    UnaryOpType uop;
 }
 
 %token INT BOOL IF ELSE WHILE PRINT
-%token <ival> TRUE_LIT FALSE_LIT INT_LIT
-%token <sval> IDENT
-%token PLUS MINUS STAR SLASH LT GT EQ NE AND OR NOT
-%token ASSIGN SEMI LPAREN RPAREN LBRACE RBRACE
+%token <sval> IDENTIFIER
+%token <ival> INTEGER
+%token LE GE EQ NE LT GT
+%token PLUS MINUS STAR SLASH NOT
+%token ASSIGN SEMICOLON COMMA
+%token LPAREN RPAREN LBRACE RBRACE
 
-%type <node> program stmt decl assign if_stmt while_stmt print_stmt block expr
-%type <nlist> stmt_list stmt_list_nonempty
-%type <ival> type_spec
+%type <stmt_list> program statement_list
+%type <node> statement block_statement
+%type <node> if_statement while_statement print_statement
+%type <node> declaration assignment_statement
+%type <dtype> type_spec
+%type <node> expression
+%type <node> rel_expr add_expr mul_expr unary_expr primary_expr
+%type <bop> add_op mul_op
+%type <rop> rel_op
 
-%left OR
-%left AND
 %left EQ NE
-%left LT GT
+%left LT GT LE GE
 %left PLUS MINUS
 %left STAR SLASH
 %right NOT UMINUS
 
-%start program
-%expect 1
-
 %%
 
 program
-    : stmt_list { g_ast_root = ast_program($1.nlist, $1.count, yylineno); $$ = g_ast_root; }
-    ;
-
-stmt_list
-    : stmt_list_nonempty { $$.nlist = $1.nlist; $$.count = $1.count; }
-    | /* empty */       { $$.nlist = NULL; $$.count = 0; }
-    ;
-
-stmt_list_nonempty
-    : stmt_list_nonempty stmt
+    : statement_list
         {
-            $$.count = $1.count + 1;
-            $$.nlist = (ASTNode **)realloc($1.nlist, sizeof(ASTNode *) * $$.count);
-            $$.nlist[$$.count - 1] = $2;
-        }
-    | stmt
-        {
-            $$.count = 1;
-            $$.nlist = (ASTNode **)malloc(sizeof(ASTNode *));
-            $$.nlist[0] = $1;
+            ast_root = ast_program($1, @1.first_line);
         }
     ;
 
-stmt
-    : decl       { $$ = $1; }
-    | assign     { $$ = $1; }
-    | if_stmt    { $$ = $1; }
-    | while_stmt { $$ = $1; }
-    | print_stmt { $$ = $1; }
-    | block      { $$ = $1; }
+statement_list
+    : statement_list statement
+        {
+            $$ = $1;
+            stmt_list_append($$, $2);
+        }
+    | /* empty */
+        {
+            $$ = stmt_list_create();
+        }
     ;
 
-decl
-    : type_spec IDENT SEMI
-        { $$ = ast_decl(dup_str($2), (DataType)$1, yylineno); free($2); }
+statement
+    : declaration           { $$ = $1; }
+    | assignment_statement  { $$ = $1; }
+    | if_statement          { $$ = $1; }
+    | while_statement       { $$ = $1; }
+    | print_statement       { $$ = $1; }
+    | block_statement       { $$ = $1; }
+    ;
+
+declaration
+    : type_spec IDENTIFIER SEMICOLON
+        {
+            $$ = ast_decl($2, $1, @1.first_line);
+        }
     ;
 
 type_spec
-    : INT  { $$ = DTYPE_INT; }
-    | BOOL { $$ = DTYPE_BOOL; }
+    : INT  { $$ = TYPE_INT; }
+    | BOOL { $$ = TYPE_BOOL; }
     ;
 
-assign
-    : IDENT ASSIGN expr SEMI
-        { $$ = ast_assign(dup_str($1), $3, yylineno); free($1); }
+assignment_statement
+    : IDENTIFIER ASSIGN expression SEMICOLON
+        {
+            $$ = ast_assign($1, $3, @1.first_line);
+        }
     ;
 
-if_stmt
-    : IF LPAREN expr RPAREN stmt ELSE stmt
-        { $$ = ast_if($3, $5, $7, yylineno); }
-    | IF LPAREN expr RPAREN stmt
-        { $$ = ast_if($3, $5, NULL, yylineno); }
+if_statement
+    : IF LPAREN expression RPAREN statement
+        {
+            $$ = ast_if($3, $5, NULL, @1.first_line);
+        }
+    | IF LPAREN expression RPAREN statement ELSE statement
+        {
+            $$ = ast_if($3, $5, $7, @1.first_line);
+        }
     ;
 
-while_stmt
-    : WHILE LPAREN expr RPAREN stmt
-        { $$ = ast_while($3, $5, yylineno); }
+while_statement
+    : WHILE LPAREN expression RPAREN statement
+        {
+            $$ = ast_while($3, $5, @1.first_line);
+        }
     ;
 
-print_stmt
-    : PRINT LPAREN expr RPAREN SEMI
-        { $$ = ast_print($3, yylineno); }
+print_statement
+    : PRINT LPAREN expression RPAREN SEMICOLON
+        {
+            $$ = ast_create_print($3, @1.first_line);
+        }
     ;
 
-block
-    : LBRACE stmt_list RBRACE
-        { $$ = ast_block($2.nlist, $2.count, yylineno); }
+block_statement
+    : LBRACE statement_list RBRACE
+        {
+            $$ = ast_block($2, @1.first_line);
+        }
     ;
 
-expr
-    : INT_LIT
-        { $$ = ast_int($1, yylineno); }
-    | TRUE_LIT
-        { $$ = ast_bool($1, yylineno); }
-    | FALSE_LIT
-        { $$ = ast_bool($1, yylineno); }
-    | IDENT
-        { $$ = ast_id(dup_str($1), yylineno); free($1); }
-    | expr PLUS expr
-        { $$ = ast_binop(OP_ADD, $1, $3, yylineno); }
-    | expr MINUS expr
-        { $$ = ast_binop(OP_SUB, $1, $3, yylineno); }
-    | expr STAR expr
-        { $$ = ast_binop(OP_MUL, $1, $3, yylineno); }
-    | expr SLASH expr
-        { $$ = ast_binop(OP_DIV, $1, $3, yylineno); }
-    | expr LT expr
-        { $$ = ast_binop(OP_LT, $1, $3, yylineno); }
-    | expr GT expr
-        { $$ = ast_binop(OP_GT, $1, $3, yylineno); }
-    | expr EQ expr
-        { $$ = ast_binop(OP_EQ, $1, $3, yylineno); }
-    | expr NE expr
-        { $$ = ast_binop(OP_NE, $1, $3, yylineno); }
-    | expr AND expr
-        { $$ = ast_binop(OP_AND, $1, $3, yylineno); }
-    | expr OR expr
-        { $$ = ast_binop(OP_OR, $1, $3, yylineno); }
-    | NOT expr %prec NOT
-        { $$ = ast_unop(OP_NOT, $2, yylineno); }
-    | MINUS expr %prec UMINUS
-        { $$ = ast_unop(OP_NEG, $2, yylineno); }
-    | LPAREN expr RPAREN
-        { $$ = $2; }
+expression
+    : rel_expr { $$ = $1; }
+    ;
+
+rel_expr
+    : add_expr { $$ = $1; }
+    | rel_expr rel_op add_expr
+        {
+            $$ = ast_relop($2, $1, $3, @2.first_line);
+        }
+    ;
+
+rel_op
+    : LT { $$ = REL_LT; }
+    | GT { $$ = REL_GT; }
+    | LE { $$ = REL_LE; }
+    | GE { $$ = REL_GE; }
+    | EQ { $$ = REL_EQ; }
+    | NE { $$ = REL_NE; }
+    ;
+
+add_expr
+    : mul_expr { $$ = $1; }
+    | add_expr add_op mul_expr
+        {
+            $$ = ast_binop($2, $1, $3, @2.first_line);
+        }
+    ;
+
+add_op
+    : PLUS { $$ = OP_ADD; }
+    | MINUS { $$ = OP_SUB; }
+    ;
+
+mul_expr
+    : unary_expr { $$ = $1; }
+    | mul_expr mul_op unary_expr
+        {
+            $$ = ast_binop($2, $1, $3, @2.first_line);
+        }
+    ;
+
+mul_op
+    : STAR  { $$ = OP_MUL; }
+    | SLASH { $$ = OP_DIV; }
+    ;
+
+unary_expr
+    : primary_expr { $$ = $1; }
+    | MINUS unary_expr %prec UMINUS
+        {
+            $$ = ast_unary(UNOP_NEG, $2, @1.first_line);
+        }
+    | NOT unary_expr
+        {
+            $$ = ast_unary(UNOP_NOT, $2, @1.first_line);
+        }
+    ;
+
+primary_expr
+    : IDENTIFIER
+        {
+            $$ = ast_ident($1, @1.first_line);
+        }
+    | INTEGER
+        {
+            $$ = ast_number($1, @1.first_line);
+        }
+    | LPAREN expression RPAREN
+        {
+            $$ = $2;
+        }
     ;
 
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Syntax error at line %d: %s\n", yylineno, s);
-    fprintf(stderr, "  Suggestion: check semicolons, braces, and parentheses.\n");
-    syntax_error_count++;
+    error_report(ERR_SYNTAX, yylineno, "%s", s);
+    parse_error_flag = 1;
 }

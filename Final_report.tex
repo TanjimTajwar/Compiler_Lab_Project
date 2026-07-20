@@ -1,0 +1,1114 @@
+\documentclass[12pt,a4paper]{report}
+
+%------------------------------------------------
+% PAGE SETTINGS
+%------------------------------------------------
+\usepackage[a4paper,
+            left=1in,
+            right=1in,
+            top=1in,
+            bottom=1in]{geometry}
+
+%------------------------------------------------
+% COLORS
+%------------------------------------------------
+\usepackage{xcolor}
+
+\definecolor{primary}{HTML}{1E3A8A}
+\definecolor{secondary}{HTML}{2563EB}
+\definecolor{accent}{HTML}{F97316}
+\definecolor{success}{HTML}{10B981}
+\definecolor{lightbg}{HTML}{F8FAFC}
+
+%------------------------------------------------
+% GRAPHICS AND DESIGN
+%------------------------------------------------
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+
+\tcbuselibrary{skins,breakable}
+
+%------------------------------------------------
+% TABLES
+%------------------------------------------------
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+
+%------------------------------------------------
+% CODE STYLING
+%------------------------------------------------
+\usepackage{listings}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{lightbg},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{secondary},
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\lstset{style=mystyle}
+
+%------------------------------------------------
+% ALGORITHMS
+%------------------------------------------------
+\usepackage[ruled,vlined]{algorithm2e}
+
+%------------------------------------------------
+% MATH
+%------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+%------------------------------------------------
+% LINKS
+%------------------------------------------------
+\usepackage[colorlinks=true,
+            linkcolor=secondary,
+            urlcolor=accent,
+            citecolor=secondary]{hyperref}
+
+%------------------------------------------------
+% HEADER / FOOTER
+%------------------------------------------------
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+
+\fancyhf{}
+\fancyhead[L]{MiniLang Compiler}
+\fancyhead[R]{Compiler Lab Project}
+\fancyfoot[C]{\thepage}
+
+%------------------------------------------------
+% SECTION FORMATTING
+%------------------------------------------------
+\usepackage{titlesec}
+
+\titleformat{\chapter}
+{\Huge\bfseries\color{primary}}
+{\thechapter}
+{1em}
+{}
+
+\titleformat{\section}
+{\Large\bfseries\color{secondary}}
+{\thesection}
+{1em}
+{}
+
+\titleformat{\subsection}
+{\large\bfseries\color{accent}}
+{\thesubsection}
+{1em}
+{}
+
+%------------------------------------------------
+% LINE SPACING
+%------------------------------------------------
+\usepackage{setspace}
+\onehalfspacing
+
+%------------------------------------------------
+% TITLE INFORMATION
+%------------------------------------------------
+\title{
+    \Huge \textbf{MiniLang Compiler}\\[0.5cm]
+    \Large Compiler Laboratory Final Project
+}
+
+\author{
+Tanjim Tajwar Arnab (22701066)\\
+Hafiz Hasnat Sifat Jami (22701068)\\
+Muznabin Ahmed (22701069)\\
+Monir Hossain (21701009)
+}
+
+\date{\today}
+
+\begin{document}
+
+
+%=================================================
+% COVER PAGE
+%=================================================
+
+\begin{titlepage}
+
+\begin{center}
+
+\vspace*{0.5cm}
+
+{\Huge\bfseries\color{primary}
+MiniLang Compiler
+}
+
+\vspace{0.4cm}
+
+{\Large Compiler Laboratory Final Project}
+
+\vspace{1cm}
+
+\begin{tcolorbox}[
+colback=blue!5,
+colframe=primary,
+width=0.9\textwidth,
+arc=3mm
+]
+\centering
+\large
+\textbf{Submitted for the Partial Fulfillment of the Requirements}\\[0.2cm]
+of the course\\[0.2cm]
+
+\textbf{CSE 711: Compiler Laboratory}
+\end{tcolorbox}
+
+\vspace{1cm}
+
+{\Large\bfseries University of Chittagong}
+
+\vspace{0.2cm}
+
+{\large Department of Computer Science \& Engineering}
+
+\vspace{1cm}
+
+\begin{tcolorbox}[
+colback=orange!5,
+colframe=accent,
+width=0.9\textwidth,
+title=\textbf{Submitted By}
+]
+
+\centering
+
+\begin{tabular}{lll}
+\toprule
+\textbf{Name} & \textbf{ID} \\
+\midrule
+Tanjim Tajwar Arnab & 22701066 \\
+Hafiz Hasnat Sifat Jami & 22701068 \\
+Muznabin Ahmed & 22701069 \\
+Monir Hossain & 21701009 \\
+\bottomrule
+\end{tabular}
+
+\end{tcolorbox}
+
+\vspace{0.8cm}
+
+\begin{tcolorbox}[
+colback=green!5,
+colframe=success,
+width=0.9\textwidth,
+title=\textbf{Course Teacher}
+]
+
+\centering
+
+\textbf{Samia Muntaha}\\
+Lecturer\\
+Department of Computer Science \& Engineering\\
+University of Chittagong\\
+Chittagong-4331
+
+\end{tcolorbox}
+
+\vfill
+
+{\large
+\textbf{Submission Date:} \today
+}
+
+\vspace{0.5cm}
+
+{\large Academic Session: 2025--2026}
+
+\end{center}
+
+\end{titlepage}
+
+
+\pagenumbering{roman}
+
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+\listoftables
+\newpage
+
+\pagenumbering{arabic}
+
+
+
+\chapter{Introduction}
+
+A compiler is a software system that translates programs written in a high-level programming language into a lower-level representation that can be executed by a computer. Compiler design is an important area of computer science because it combines language processing, program analysis, optimization, and code generation.
+
+This project presents the design and implementation of a complete compiler for a simplified programming language called \textbf{MiniLang}. The compiler was developed using \textbf{C}, \textbf{Flex}, and \textbf{Bison}. It performs lexical analysis, syntax analysis, semantic analysis, intermediate code generation, optimization, and target code generation.
+
+The compiler supports integer and boolean data types, variable declarations, assignment statements, arithmetic and relational expressions, conditional statements, while loops, print statements, and block scoping.
+
+The final output of the compiler includes:
+
+\begin{itemize}
+    \item Three-Address Code (TAC)
+    \item Optimized TAC
+    \item Pseudo-Assembly Target Code
+\end{itemize}
+
+The project follows a modular architecture where each compilation phase is implemented in a separate module to improve maintainability, readability, and extensibility.
+
+
+
+\chapter{Lexical Analysis}
+
+\section{Overview}
+
+The lexical analysis phase is the first stage of the compiler. It is implemented using \textbf{Flex} and is responsible for reading the source program character by character and converting it into a sequence of meaningful tokens. These tokens are then passed to the syntax analyzer for further processing.
+
+\section{Recognized Tokens}
+
+The lexer recognizes the following categories of tokens:
+
+\begin{itemize}
+    \item Keywords: \texttt{int}, \texttt{bool}, \texttt{if}, \texttt{else}, \texttt{while}, \texttt{print}
+    \item Identifiers
+    \item Integer constants
+    \item Arithmetic operators
+    \item Relational operators
+    \item Delimiters and punctuation symbols
+\end{itemize}
+
+\section{Handling Comments and Whitespace}
+
+The lexical analyzer ignores unnecessary whitespace characters such as spaces, tabs, and new lines. It also handles comments so that they do not affect the compilation process.
+
+\section{Error Handling}
+
+If an invalid character or malformed token is encountered, the lexer reports a lexical error along with the corresponding line number. This helps users quickly identify and correct mistakes in the source code.
+
+\section{Example}
+
+\begin{lstlisting}[language=C]
+int x;
+x = 10;
+print(x);
+\end{lstlisting}
+
+Generated token stream:
+
+\begin{lstlisting}
+INT
+IDENTIFIER(x)
+ASSIGN
+INTEGER(10)
+PRINT
+\end{lstlisting}
+
+\section{Complexity Analysis}
+
+The lexical analyzer scans the source code once from left to right.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(1)\)
+\end{itemize}
+
+where \(n\) is the number of characters in the input program.
+
+\chapter{Syntax Analysis}
+
+\section{Overview}
+
+The syntax analysis phase is implemented using \textbf{Bison}. Its primary responsibility is to verify whether the sequence of tokens produced by the lexical analyzer follows the grammar rules of MiniLang. The parser also constructs an Abstract Syntax Tree (AST) that represents the hierarchical structure of the source program.
+
+\section{Grammar Design}
+
+The grammar of MiniLang was designed to support variable declarations, assignment statements, expressions, conditional statements, loops, print statements, and block scopes. Operator precedence and associativity rules are defined to correctly parse arithmetic and relational expressions.
+
+Supported grammar constructs include:
+
+\begin{itemize}
+    \item Variable declarations
+    \item Assignment statements
+    \item Arithmetic expressions
+    \item Relational expressions
+    \item If-Else statements
+    \item While loops
+    \item Print statements
+    \item Block statements
+\end{itemize}
+
+\section{Abstract Syntax Tree Construction}
+
+During parsing, AST nodes are created for different language constructs. This tree structure is later used by the semantic analyzer, code generator, and optimizer.
+
+Examples of AST node types include:
+
+\begin{itemize}
+    \item Program
+    \item Declaration
+    \item Assignment
+    \item If Statement
+    \item While Statement
+    \item Print Statement
+    \item Binary Expression
+    \item Relational Expression
+\end{itemize}
+
+\section{Error Handling}
+
+The parser reports syntax errors whenever an invalid program structure is encountered. Error messages include line number information, helping users identify mistakes quickly.
+
+Example:
+
+\begin{lstlisting}
+int x
+x = 5;
+\end{lstlisting}
+
+Output:
+
+\begin{lstlisting}
+Syntax Error: expected ';'
+\end{lstlisting}
+
+\section{Complexity Analysis}
+
+The parser processes each token once according to the grammar rules.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of tokens in the source program.
+
+
+\chapter{Abstract Syntax Tree}
+
+\section{Overview}
+
+After successful parsing, the compiler constructs an Abstract Syntax Tree (AST). The AST provides a simplified and structured representation of the source program and serves as the foundation for semantic analysis, code generation, and optimization.
+
+\section{AST Structure}
+
+The AST is implemented using custom data structures defined in \texttt{ast.h} and \texttt{ast.c}. Each node represents a language construct and stores the information necessary for later compiler phases.
+
+The implemented AST node types include:
+
+\begin{itemize}
+    \item Program Node
+    \item Declaration Node
+    \item Assignment Node
+    \item If Statement Node
+    \item While Statement Node
+    \item Print Statement Node
+    \item Identifier Node
+    \item Number Node
+    \item Binary Expression Node
+    \item Relational Expression Node
+\end{itemize}
+
+\section{Why AST is Used}
+
+A parse tree contains all grammar symbols and is usually large and difficult to process. The AST removes unnecessary grammar details and keeps only the significant information required for semantic checking and code generation.
+
+This simplification makes the compiler more efficient and easier to maintain.
+
+\section{Example}
+
+Source Code:
+
+\begin{lstlisting}[language=C]
+x = a + b * c;
+\end{lstlisting}
+
+AST Representation:
+
+\begin{lstlisting}
+Assignment
+|
++-- x
+|
++-- +
+    |
+    +-- a
+    |
+    +-- *
+        |
+        +-- b
+        |
+        +-- c
+\end{lstlisting}
+
+The AST correctly preserves operator precedence by evaluating multiplication before addition.
+
+\section{AST Traversal}
+
+Several compiler phases traverse the AST, including:
+
+\begin{itemize}
+    \item Semantic Analysis
+    \item TAC Generation
+    \item Optimization
+    \item Target Code Generation
+\end{itemize}
+
+Tree traversal techniques allow these phases to process each node systematically.
+
+\section{Complexity Analysis}
+
+Let \(n\) represent the number of AST nodes.
+
+\begin{itemize}
+    \item AST Construction: \(O(n)\)
+    \item AST Traversal: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+Since each source construct is represented by a node, the memory usage grows linearly with program size.
+
+\chapter{Symbol Table and Semantic Analysis}
+
+\section{Overview}
+
+The semantic analysis phase is responsible for verifying the meaning of a program after successful parsing. This phase uses a symbol table to store information about declared variables and performs various semantic checks to ensure program correctness.
+
+\section{Symbol Table Design}
+
+The symbol table is implemented to maintain information about identifiers declared in the program. For each variable, the following information is stored:
+
+\begin{itemize}
+    \item Variable Name
+    \item Data Type
+    \item Scope Level
+\end{itemize}
+
+The symbol table supports insertion, lookup, and scope management operations which are required during semantic analysis.
+
+\section{Semantic Checks}
+
+Several semantic rules are enforced by the compiler.
+
+\subsection{Undeclared Variables}
+
+The compiler ensures that a variable is declared before it is used.
+
+\begin{lstlisting}[language=C]
+x = 10;
+\end{lstlisting}
+
+Result:
+
+\begin{lstlisting}
+Semantic Error:
+Undeclared variable 'x'
+\end{lstlisting}
+
+\subsection{Duplicate Declarations}
+
+Multiple declarations of the same variable within a scope are not allowed.
+
+\begin{lstlisting}[language=C]
+int x;
+int x;
+\end{lstlisting}
+
+Result:
+
+\begin{lstlisting}
+Semantic Error:
+Duplicate declaration of 'x'
+\end{lstlisting}
+
+\subsection{Type Checking}
+
+Assignments and expressions are checked to ensure type consistency.
+
+\begin{lstlisting}[language=C]
+int x;
+bool b;
+
+x = b;
+\end{lstlisting}
+
+Result:
+
+\begin{lstlisting}
+Semantic Error:
+Type mismatch
+\end{lstlisting}
+
+\subsection{Conditional Expression Validation}
+
+The compiler verifies that expressions used in \texttt{if} and \texttt{while} statements are valid conditions.
+
+\begin{lstlisting}[language=C]
+if(x + y)
+{
+    print(x);
+}
+\end{lstlisting}
+
+Invalid conditions are reported as semantic errors.
+
+\section{Scope Management}
+
+Block scopes created using braces \texttt{\{\}} are managed through scope levels. Variables declared inside a block remain accessible only within that block.
+
+\section{Complexity Analysis}
+
+Assuming \(n\) identifiers are stored in the symbol table:
+
+\begin{itemize}
+    \item Symbol Lookup: \(O(n)\)
+    \item Symbol Insertion: \(O(n)\)
+    \item Semantic Traversal: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+The semantic analyzer traverses the AST once while validating declarations, types, and scopes.
+
+
+\chapter{Three-Address Code Generation}
+
+\section{Overview}
+
+After successful semantic analysis, the compiler generates an intermediate representation known as \textbf{Three-Address Code (TAC)}. TAC provides a machine-independent representation of the source program and simplifies later stages such as optimization and target code generation.
+
+Each TAC instruction contains at most three operands and represents a single operation. Complex expressions are decomposed into simpler statements using temporary variables.
+
+\section{Temporary Variables and Labels}
+
+The compiler automatically generates temporary variables and labels during code generation.
+
+\begin{itemize}
+    \item Temporary variables are used for intermediate results.
+    \item Labels are used to represent control flow.
+    \item Conditional and unconditional jumps are generated for branching statements.
+\end{itemize}
+
+\section{Expression Translation}
+
+Arithmetic expressions are translated into a sequence of TAC instructions.
+
+Source Code:
+
+\begin{lstlisting}[language=C]
+x = a + b * c;
+\end{lstlisting}
+
+Generated TAC:
+
+\begin{lstlisting}
+t1 = b * c
+t2 = a + t1
+x = t2
+\end{lstlisting}
+
+The generated code preserves operator precedence by evaluating multiplication before addition.
+
+\section{Control Flow Translation}
+
+Conditional statements and loops are translated using labels and jumps.
+
+Example:
+
+\begin{lstlisting}[language=C]
+if(a > b)
+{
+    x = 1;
+}
+\end{lstlisting}
+
+Generated TAC:
+
+\begin{lstlisting}
+if a > b goto L1
+goto L2
+
+L1:
+x = 1
+
+L2:
+\end{lstlisting}
+
+Similarly, while loops are translated into looping control-flow structures using labels.
+
+\section{Benefits of TAC}
+
+\begin{itemize}
+    \item Simplifies optimization.
+    \item Provides machine-independent code.
+    \item Makes control flow explicit.
+    \item Easy to translate into target code.
+\end{itemize}
+
+\section{Complexity Analysis}
+
+TAC generation traverses the AST once and emits instructions for each node.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of AST nodes.
+
+
+
+\chapter{Code Optimization}
+
+\section{Overview}
+
+After generating Three-Address Code (TAC), the compiler applies several optimization techniques to improve the quality of the generated code. The objective of optimization is to reduce unnecessary computations and generate cleaner intermediate code without changing the original program behavior.
+
+\section{Implemented Optimizations}
+
+The compiler performs the following optimization techniques:
+
+\begin{itemize}
+    \item Constant Folding
+    \item Algebraic Simplification
+    \item Redundant Temporary Removal
+\end{itemize}
+
+\section{Constant Folding}
+
+Constant expressions are evaluated during compilation rather than execution.
+
+Example:
+
+\begin{lstlisting}
+t1 = 2 + 3
+\end{lstlisting}
+
+Optimized Output:
+
+\begin{lstlisting}
+t1 = 5
+\end{lstlisting}
+
+This reduces runtime computations and improves efficiency.
+
+\section{Algebraic Simplification}
+
+Simple mathematical identities are used to eliminate unnecessary operations.
+
+Examples:
+
+\begin{lstlisting}
+x + 0  -> x
+x - 0  -> x
+x * 1  -> x
+\end{lstlisting}
+
+These transformations reduce the number of generated instructions.
+
+\section{Redundant Temporary Removal}
+
+The optimizer removes unnecessary temporary variables when possible.
+
+Example:
+
+\begin{lstlisting}
+t1 = x
+y = t1
+\end{lstlisting}
+
+Optimized Output:
+
+\begin{lstlisting}
+y = x
+\end{lstlisting}
+
+This reduces memory usage and improves code readability.
+
+\section{Benefits of Optimization}
+
+\begin{itemize}
+    \item Reduces the number of generated instructions.
+    \item Eliminates unnecessary computations.
+    \item Produces cleaner TAC.
+    \item Improves target code quality.
+\end{itemize}
+
+\section{Complexity Analysis}
+
+Optimization is performed by traversing the TAC instructions.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of TAC instructions.
+
+\chapter{Target Code Generation}
+
+\section{Overview}
+
+The final phase of the compiler is target code generation. In this stage, the optimized Three-Address Code (TAC) is translated into a simplified pseudo-assembly representation. The generated target code provides a lower-level view of the source program and demonstrates how high-level instructions can be mapped to machine-oriented operations.
+
+\section{Code Translation Process}
+
+The target code generator processes each TAC instruction and converts it into equivalent assembly-like instructions. Arithmetic operations, assignments, conditional branches, and loops are translated into a sequence of low-level operations.
+
+The generated code uses instructions such as:
+
+\begin{itemize}
+    \item LOAD
+    \item STORE
+    \item ADD
+    \item SUB
+    \item MUL
+    \item DIV
+    \item JMP
+    \item JMPIF
+\end{itemize}
+
+\section{Example}
+
+Optimized TAC:
+
+\begin{lstlisting}
+t1 = b * c
+t2 = a + t1
+x = t2
+\end{lstlisting}
+
+Generated Target Code:
+
+\begin{lstlisting}
+LOAD b
+MUL c
+STORE t1
+
+LOAD a
+ADD t1
+STORE t2
+
+LOAD t2
+STORE x
+\end{lstlisting}
+
+\section{Control Flow Translation}
+
+Control structures such as \texttt{if} statements and \texttt{while} loops are implemented using labels and jump instructions.
+
+Example:
+
+\begin{lstlisting}
+if a > b goto L1
+goto L2
+
+L1:
+x = 1
+
+L2:
+\end{lstlisting}
+
+Generated Target Code:
+
+\begin{lstlisting}
+CMP a, b
+JGT L1
+JMP L2
+
+L1:
+MOV x, 1
+
+L2:
+\end{lstlisting}
+
+\section{Benefits}
+
+\begin{itemize}
+    \item Demonstrates low-level execution flow.
+    \item Simplifies understanding of control structures.
+    \item Provides an intermediate step before machine code generation.
+    \item Maintains machine independence.
+\end{itemize}
+
+\section{Complexity Analysis}
+
+The target code generator processes each TAC instruction exactly once.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of TAC instructions generated by the compiler.
+
+\chapter{Complexity Analysis}
+
+\section{Overview}
+
+The efficiency of a compiler depends on the performance of each compilation phase. This chapter analyzes the time and space complexity of the major components implemented in the MiniLang compiler.
+
+\section{Lexical Analysis}
+
+The lexical analyzer scans the source program character by character and generates tokens.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(1)\)
+\end{itemize}
+
+where \(n\) represents the number of characters in the source code.
+
+\section{Syntax Analysis}
+
+The parser processes the token stream according to the grammar rules and constructs the AST.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of tokens.
+
+\section{Abstract Syntax Tree}
+
+The AST stores program structure in a hierarchical form.
+
+\begin{itemize}
+    \item Construction Complexity: \(O(n)\)
+    \item Traversal Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+where \(n\) is the number of AST nodes.
+
+\section{Symbol Table and Semantic Analysis}
+
+The semantic analyzer uses symbol table operations such as insertion and lookup while traversing the AST.
+
+\begin{itemize}
+    \item Symbol Insertion: \(O(n)\)
+    \item Symbol Lookup: \(O(n)\)
+    \item Semantic Analysis: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+\section{TAC Generation}
+
+The code generator traverses the AST and produces Three-Address Code instructions.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+\section{Code Optimization}
+
+Optimization techniques operate directly on the generated TAC instructions.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+\section{Target Code Generation}
+
+The target code generator converts TAC into pseudo-assembly instructions.
+
+\begin{itemize}
+    \item Time Complexity: \(O(n)\)
+    \item Space Complexity: \(O(n)\)
+\end{itemize}
+
+\section{Overall Complexity}
+
+Since each compiler phase processes the program sequentially, the overall complexity remains approximately linear with respect to the size of the input program.
+
+\begin{itemize}
+    \item Overall Time Complexity: \(O(n)\)
+    \item Overall Space Complexity: \(O(n)\)
+\end{itemize}
+
+Therefore, the MiniLang compiler provides efficient compilation while maintaining modularity and correctness.
+
+\chapter{Testing and Results}
+
+\section{Overview}
+
+Several test cases were used to evaluate the correctness and reliability of the MiniLang compiler. The testing process verified lexical analysis, syntax analysis, semantic analysis, TAC generation, optimization, and target code generation.
+
+\section{Test Case 1: Arithmetic Expression}
+
+Source Code:
+
+\begin{lstlisting}[language=C]
+int a;
+int b;
+int c;
+int x;
+
+a = 2;
+b = 3;
+c = 4;
+
+x = a + b * c;
+
+print(x);
+\end{lstlisting}
+
+Generated TAC:
+
+\begin{lstlisting}
+t1 = b * c
+t2 = a + t1
+x = t2
+print x
+\end{lstlisting}
+
+Result:
+
+\begin{itemize}
+    \item Parsing Successful
+    \item Semantic Analysis Successful
+    \item TAC Generated Successfully
+\end{itemize}
+
+\section{Test Case 2: While Loop}
+
+Source Code:
+
+\begin{lstlisting}[language=C]
+int i;
+
+i = 0;
+
+while(i < 5)
+{
+    print(i);
+    i = i + 1;
+}
+\end{lstlisting}
+
+Generated TAC:
+
+\begin{lstlisting}
+L1:
+if i < 5 goto L2
+goto L3
+
+L2:
+print i
+t1 = i + 1
+i = t1
+goto L1
+
+L3:
+\end{lstlisting}
+
+Result:
+
+\begin{itemize}
+    \item Loop structure generated correctly.
+    \item Labels and jumps handled properly.
+\end{itemize}
+
+\section{Test Case 3: Semantic Error Detection}
+
+Source Code:
+
+\begin{lstlisting}[language=C]
+int x;
+bool b;
+
+x = b;
+\end{lstlisting}
+
+Output:
+
+\begin{lstlisting}
+Semantic Error:
+Type mismatch
+\end{lstlisting}
+
+Result:
+
+\begin{itemize}
+    \item Error detected successfully.
+    \item Compilation terminated safely.
+\end{itemize}
+
+\section{Generated Files}
+
+The compiler produces the following output files:
+
+\begin{itemize}
+    \item \texttt{output.tac}
+    \item \texttt{output.asm}
+\end{itemize}
+
+The generated TAC represents the intermediate code, while the assembly file contains the final target code representation.
+
+\section{Summary of Results}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+Feature & Status \\
+\hline
+Lexical Analysis & Passed \\
+Syntax Analysis & Passed \\
+AST Generation & Passed \\
+Semantic Analysis & Passed \\
+TAC Generation & Passed \\
+Code Optimization & Passed \\
+Target Code Generation & Passed \\
+Error Handling & Passed \\
+\hline
+\end{tabular}
+\caption{Testing Summary}
+\end{table}
+
+The experimental results demonstrate that the compiler successfully implements all required phases of compilation and correctly processes valid MiniLang programs while detecting and reporting invalid constructs.
+
+
+\chapter{Conclusion}
+
+The MiniLang Compiler project successfully implemented all major phases of a modern compiler using C, Flex, and Bison. The system performs lexical analysis, syntax analysis, AST construction, semantic verification, Three-Address Code generation, optimization, and target code generation.
+
+The compiler supports variable declarations, assignments, arithmetic expressions, relational expressions, conditional statements, loops, print statements, and block scoping. Error handling mechanisms were incorporated throughout the compilation process to detect lexical, syntax, and semantic errors.
+
+The generated Three-Address Code and pseudo-assembly outputs demonstrate the successful translation of source programs into lower-level representations. Basic optimization techniques further improve the quality of the generated code.
+
+Through this project, practical knowledge of compiler construction, formal language processing, semantic checking, intermediate representation design, and code generation techniques was gained. The completed compiler serves as a working demonstration of the fundamental concepts studied in Compiler Laboratory (CSE 711).
+
+\begin{thebibliography}{9}
+
+\bibitem{dragon}
+Aho, Alfred V., Lam, Monica S., Sethi, Ravi, and Ullman, Jeffrey D.
+\textit{Compilers: Principles, Techniques, and Tools}.
+Pearson Education.
+
+\bibitem{flex}
+The Flex Project.
+\textit{Flex Documentation}.
+https://westes.github.io/flex/manual/
+
+\bibitem{bison}
+GNU Project.
+\textit{Bison Manual}.
+https://www.gnu.org/software/bison/manual/
+
+\end{thebibliography}
+\end{document}

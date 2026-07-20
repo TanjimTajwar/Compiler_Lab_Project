@@ -60,28 +60,27 @@ extern int yydebug;
     ELSE = 261,                    /* ELSE  */
     WHILE = 262,                   /* WHILE  */
     PRINT = 263,                   /* PRINT  */
-    TRUE_LIT = 264,                /* TRUE_LIT  */
-    FALSE_LIT = 265,               /* FALSE_LIT  */
-    INT_LIT = 266,                 /* INT_LIT  */
-    IDENT = 267,                   /* IDENT  */
-    PLUS = 268,                    /* PLUS  */
-    MINUS = 269,                   /* MINUS  */
-    STAR = 270,                    /* STAR  */
-    SLASH = 271,                   /* SLASH  */
-    LT = 272,                      /* LT  */
-    GT = 273,                      /* GT  */
-    EQ = 274,                      /* EQ  */
-    NE = 275,                      /* NE  */
-    AND = 276,                     /* AND  */
-    OR = 277,                      /* OR  */
-    NOT = 278,                     /* NOT  */
-    ASSIGN = 279,                  /* ASSIGN  */
-    SEMI = 280,                    /* SEMI  */
-    LPAREN = 281,                  /* LPAREN  */
-    RPAREN = 282,                  /* RPAREN  */
-    LBRACE = 283,                  /* LBRACE  */
-    RBRACE = 284,                  /* RBRACE  */
-    UMINUS = 285                   /* UMINUS  */
+    IDENTIFIER = 264,              /* IDENTIFIER  */
+    INTEGER = 265,                 /* INTEGER  */
+    LE = 266,                      /* LE  */
+    GE = 267,                      /* GE  */
+    EQ = 268,                      /* EQ  */
+    NE = 269,                      /* NE  */
+    LT = 270,                      /* LT  */
+    GT = 271,                      /* GT  */
+    PLUS = 272,                    /* PLUS  */
+    MINUS = 273,                   /* MINUS  */
+    STAR = 274,                    /* STAR  */
+    SLASH = 275,                   /* SLASH  */
+    NOT = 276,                     /* NOT  */
+    ASSIGN = 277,                  /* ASSIGN  */
+    SEMICOLON = 278,               /* SEMICOLON  */
+    COMMA = 279,                   /* COMMA  */
+    LPAREN = 280,                  /* LPAREN  */
+    RPAREN = 281,                  /* RPAREN  */
+    LBRACE = 282,                  /* LBRACE  */
+    RBRACE = 283,                  /* RBRACE  */
+    UMINUS = 284                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -90,14 +89,18 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 33 "parser.y"
+#line 39 "parser.y"
 
     int ival;
     char *sval;
+    DataType dtype;
     ASTNode *node;
-    NodeList nlist;
+    StmtList *stmt_list;
+    BinOpType bop;
+    RelOpType rop;
+    UnaryOpType uop;
 
-#line 101 "parser.tab.h"
+#line 104 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -105,9 +108,23 @@ typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
+/* Location type.  */
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE YYLTYPE;
+struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+};
+# define YYLTYPE_IS_DECLARED 1
+# define YYLTYPE_IS_TRIVIAL 1
+#endif
+
 
 extern YYSTYPE yylval;
-
+extern YYLTYPE yylloc;
 
 int yyparse (void);
 

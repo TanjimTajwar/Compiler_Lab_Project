@@ -1,116 +1,144 @@
 /*
- * File: symbol_table.c
- * Developed by: Muznabin Ahmed (ID: 22701069)
- * Contribution: Scope-Based Symbol Table with Stack
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: insert/lookup O(1) average per scope (hash could be used;
- *             linear chain per scope — O(s) per scope with s symbols);
- *             enter/exit scope O(1).
+ * Primary Contributor:
+ * Monir Hossain
+ *
+ * Contributors:
+ * Tanjim Tajwar Arnab
+ * Hafiz Hasnat Sifat Jami
+ * Muznabin Ahmed
+ *
+ * Symbol table implementation with nested scopes.
  */
 
-#include "ast.h"
+#include "symbol_table.h"
+#include "errors.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static Scope *current_scope = NULL;
-static int scope_depth = 0;
-
-void symtab_init(void) {
-    symtab_free();
-    symtab_enter_scope(); /* global scope */
+static char *strdup_safe(const char *s) {
+    size_t len = strlen(s) + 1;
+    char *copy = (char *)malloc(len);
+    if (copy) memcpy(copy, s, len);
+    return copy;
 }
 
-void symtab_enter_scope(void) {
-    Scope *sc = (Scope *)calloc(1, sizeof(Scope));
-    sc->level = scope_depth++;
-    sc->parent = current_scope;
-    current_scope = sc;
+SymbolTable *symtab_create(void) {
+    SymbolTable *table = (SymbolTable *)calloc(1, sizeof(SymbolTable));
+    if (!table) return NULL;
+    symtab_enter_scope(table);
+    return table;
 }
 
-void symtab_exit_scope(void) {
-    if (!current_scope) return;
-    Scope *old = current_scope;
-    current_scope = old->parent;
-    scope_depth--;
+void symtab_destroy(SymbolTable *table) {
+    while (table && table->current) {
+        symtab_exit_scope(table);
+    }
+    free(table);
+}
 
-    Symbol *sym = old->symbols;
+void symtab_enter_scope(SymbolTable *table) {
+    Scope *scope;
+    if (!table) return;
+
+    scope = (Scope *)calloc(1, sizeof(Scope));
+    if (!scope) return;
+
+    scope->parent = table->current;
+    scope->level = table->current ? table->current->level + 1 : 0;
+    table->current = scope;
+}
+
+void symtab_exit_scope(SymbolTable *table) {
+    Scope *old;
+    Symbol *sym;
+    Symbol *next;
+
+    if (!table || !table->current) return;
+
+    old = table->current;
+    sym = old->symbols;
     while (sym) {
-        Symbol *n = sym->next;
+        next = sym->next;
         free(sym->name);
         free(sym);
-        sym = n;
+        sym = next;
     }
+
+    table->current = old->parent;
     free(old);
 }
 
-static Symbol *find_in_scope(Scope *sc, const char *name) {
-    for (Symbol *s = sc->symbols; s; s = s->next) {
-        if (strcmp(s->name, name) == 0) return s;
-    }
-    return NULL;
-}
+int symtab_insert(SymbolTable *table, const char *name, DataType type, int line) {
+    Symbol *sym;
 
-static char *sym_strdup(const char *s) {
-    size_t n = strlen(s) + 1;
-    char *d = (char *)malloc(n);
-    if (d) memcpy(d, s, n);
-    return d;
-}
+    if (!table || !name) return 0;
 
-int symtab_insert(char *name, DataType type, int line) {
-    if (!current_scope) symtab_init();
-    if (find_in_scope(current_scope, name)) {
-        return 0; /* duplicate in same scope */
+    if (symtab_lookup_current(table, name)) {
+        error_report(ERR_SEMANTIC, line,
+                     "Duplicate declaration of variable '%s'", name);
+        table->error_count++;
+        return 0;
     }
-    Symbol *sym = (Symbol *)calloc(1, sizeof(Symbol));
-    sym->name = sym_strdup(name);
+
+    sym = (Symbol *)calloc(1, sizeof(Symbol));
+    if (!sym) return 0;
+
+    sym->name = strdup_safe(name);
     sym->type = type;
-    sym->scope_level = current_scope->level;
-    sym->line_declared = line;
-    sym->next = current_scope->symbols;
-    current_scope->symbols = sym;
+    sym->line = line;
+    sym->next = table->current->symbols;
+    table->current->symbols = sym;
     return 1;
 }
 
-Symbol *symtab_lookup(char *name) {
-    for (Scope *sc = current_scope; sc; sc = sc->parent) {
-        Symbol *found = find_in_scope(sc, name);
-        if (found) return found;
+Symbol *symtab_lookup(SymbolTable *table, const char *name) {
+    Scope *scope;
+    Symbol *sym;
+
+    if (!table || !name) return NULL;
+
+    for (scope = table->current; scope; scope = scope->parent) {
+        for (sym = scope->symbols; sym; sym = sym->next) {
+            if (strcmp(sym->name, name) == 0) {
+                return sym;
+            }
+        }
     }
     return NULL;
 }
 
-Symbol *symtab_lookup_current(char *name) {
-    if (!current_scope) return NULL;
-    return find_in_scope(current_scope, name);
+Symbol *symtab_lookup_current(SymbolTable *table, const char *name) {
+    Symbol *sym;
+
+    if (!table || !table->current || !name) return NULL;
+
+    for (sym = table->current->symbols; sym; sym = sym->next) {
+        if (strcmp(sym->name, name) == 0) {
+            return sym;
+        }
+    }
+    return NULL;
 }
 
-void symtab_print(void) {
+void symtab_print(SymbolTable *table) {
+    Scope *scope;
+    Symbol *sym;
+
+    if (!table) return;
+
     printf("=== Symbol Table ===\n");
-    for (Scope *sc = current_scope; sc; sc = sc->parent) {
-        printf("Scope level %d:\n", sc->level);
-        for (Symbol *s = sc->symbols; s; s = s->next) {
-            const char *t = (s->type == DTYPE_INT) ? "int" : "bool";
-            printf("  %s : %s (declared line %d)\n", s->name, t, s->line_declared);
+    for (scope = table->current; scope; scope = scope->parent) {
+        printf("Scope level %d:\n", scope->level);
+        for (sym = scope->symbols; sym; sym = sym->next) {
+            printf("  %s : %s (declared at line %d)\n",
+                   sym->name, data_type_to_string(sym->type), sym->line);
         }
     }
-    printf("====================\n");
-}
-
-void symtab_free(void) {
-    while (current_scope && current_scope->parent)
-        symtab_exit_scope();
-    if (current_scope) {
-        Symbol *sym = current_scope->symbols;
-        while (sym) {
-            Symbol *n = sym->next;
-            free(sym->name);
-            free(sym);
-            sym = n;
-        }
-        free(current_scope);
-        current_scope = NULL;
-    }
-    scope_depth = 0;
 }

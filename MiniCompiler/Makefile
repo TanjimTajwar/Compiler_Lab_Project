@@ -1,53 +1,51 @@
-# MiniLang Compiler — Makefile
-# Developed by: Tanjim Tajwar Arnab (ID: 22701066) — Integration & Build
+# MiniLang Compiler Makefile
+#
+# Team Members:
+# - Tanjim Tajwar Arnab (22701066)
+# - Hafiz Hasnat Sifat Jami (22701068)
+# - Muznabin Ahmed (22701069)
+# - Monir Hossain (21701009)
+#
+# Primary Contributor:
+# Hafiz Hasnat Sifat Jami
+#
+# Contributors:
+# Tanjim Tajwar Arnab
+# Muznabin Ahmed
+# Monir Hossain
 
 CC      = gcc
-CFLAGS  = -Wall -Wextra -g -std=c11
+CFLAGS  = -Wall -Wextra -g -std=c99
 FLEX    = flex
 BISON   = bison
 
-# On Windows (MSYS2), produce .exe; on Linux, plain name
-ifeq ($(OS),Windows_NT)
-TARGET  = minicompiler.exe
-EXE     = .exe
-else
 TARGET  = minicompiler
-EXE     =
-endif
-SRCS    = ast.c symbol_table.c semantic.c codegen.c optimizer.c target_code.c main.c
-GEN_C   = lex.yy.c parser.tab.c
-OBJS    = $(SRCS:.c=.o) lex.yy.o parser.tab.o
+SRCS    = ast.c symbol_table.c errors.c semantic.c codegen.c optimizer.c targetcode.c main.c
+GENS    = lex.yy.c parser.tab.c parser.tab.h
 
-TEST    = testcases/test1.ml
+OBJS    = $(GENS:.c=.o) $(SRCS:.c=.o)
 
-.PHONY: all clean run
+.PHONY: all clean test
 
 all: $(TARGET)
 
-parser.tab.c parser.tab.h: parser.y
-	$(BISON) -d -o parser.tab.c parser.y
+$(TARGET): $(GENS) $(SRCS)
+	$(CC) $(CFLAGS) -o $(TARGET) lex.yy.c parser.tab.c $(SRCS)
 
 lex.yy.c: lexer.l parser.tab.h
-	$(FLEX) -o lex.yy.c lexer.l
+	$(FLEX) lexer.l
 
-lex.yy.o: lex.yy.c parser.tab.h
-	$(CC) $(CFLAGS) -c lex.yy.c -o lex.yy.o
+parser.tab.c parser.tab.h: parser.y
+	$(BISON) -d parser.y
 
-parser.tab.o: parser.tab.c
-	$(CC) $(CFLAGS) -c parser.tab.c -o parser.tab.o
-
-%.o: %.c ast.h
+%.o: %.c parser.tab.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
-
-run: $(TARGET)
-	./$(TARGET) -d $(TEST) || $(TARGET) -d $(TEST)
-	@echo "--- output.tac ---"
-	@cat output.tac
-	@echo "--- output.asm ---"
-	@cat output.asm
-
 clean:
-	rm -f $(TARGET) $(OBJS) lex.yy.c parser.tab.c parser.tab.h output.tac output.asm
+	rm -f $(TARGET) $(GENS) *.o output.tac output.asm
+	rm -f lex.yy.c
+
+test: $(TARGET)
+	./$(TARGET) testcases/test1.ml
+	./$(TARGET) testcases/test2.ml
+	./$(TARGET) testcases/test3.ml

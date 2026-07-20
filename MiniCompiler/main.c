@@ -1,109 +1,137 @@
 /*
- * File: main.c
- * Developed by: Tanjim Tajwar Arnab (ID: 22701066)
- * Contribution: Driver, Phase Integration, Debug Mode, CLI
+ * Team Members:
+ * - Tanjim Tajwar Arnab (22701066)
+ * - Hafiz Hasnat Sifat Jami (22701068)
+ * - Muznabin Ahmed (22701069)
+ * - Monir Hossain (21701009)
  *
- * Complexity: overall O(n) dominated by parse + semantic + codegen passes.
+ * Primary Contributor:
+ * Tanjim Tajwar Arnab
+ *
+ * Contributors:
+ * Hafiz Hasnat Sifat Jami
+ * Muznabin Ahmed
+ * Monir Hossain
+ *
+ * MiniLang compiler driver program.
  */
 
-#include "ast.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-extern ASTNode *g_ast_root;
+#include "ast.h"
+#include "errors.h"
+#include "semantic.h"
+#include "codegen.h"
+#include "optimizer.h"
+#include "targetcode.h"
+
+extern ASTNode *ast_root;
 extern int yyparse(void);
 extern FILE *yyin;
+extern int yylineno;
 
-static int debug_mode = 0;
+extern int parse_error_flag;
 
-static void usage(const char *prog) {
-    fprintf(stderr, "Usage: %s [-d] <source.ml>\n", prog);
-    fprintf(stderr, "  -d    debug mode (AST, symbol table, TAC to stdout)\n");
+static void print_usage(const char *prog) {
+    fprintf(stderr, "Usage: %s <source_file.ml>\n", prog);
+    fprintf(stderr, "  Compiles MiniLang source and produces output.tac and output.asm\n");
 }
 
-int main(int argc, char **argv) {
-    const char *input = NULL;
+int main(int argc, char *argv[]) {
+    FILE *tac_file;
+    FILE *asm_file;
+    TACList *tac;
+    int semantic_errors;
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-d") == 0)
-            debug_mode = 1;
-        else if (argv[i][0] != '-' || !strcmp(argv[i], "-"))
-            input = argv[i];
-        else {
-            usage(argv[0]);
-            return 1;
-        }
-    }
-
-    if (!input) {
-        usage(argv[0]);
+    if (argc != 2) {
+        print_usage(argv[0]);
         return 1;
     }
 
-    yyin = fopen(input, "r");
+    yyin = fopen(argv[1], "r");
     if (!yyin) {
-        perror(input);
+        fprintf(stderr, "Error: Cannot open source file '%s'\n", argv[1]);
         return 1;
     }
 
-    printf("MiniLang Compiler — processing '%s'\n", input);
-    syntax_error_count = 0;
+    error_reset();
+    yylineno = 1;
+    parse_error_flag = 0;
 
-    if (yyparse() != 0 || syntax_error_count > 0) {
-        fprintf(stderr, "Compilation failed: %d syntax error(s).\n", syntax_error_count);
+    printf("=== MiniLang Compiler ===\n");
+    printf("Compiling: %s\n\n", argv[1]);
+
+    if (yyparse() != 0 || parse_error_flag) {
+        fprintf(stderr, "\nCompilation aborted due to syntax errors.\n");
         fclose(yyin);
         return 1;
     }
+
     fclose(yyin);
 
-    if (!g_ast_root) {
-        fprintf(stderr, "Error: empty program.\n");
+    if (!ast_root) {
+        fprintf(stderr, "Error: No AST generated.\n");
         return 1;
     }
 
-    if (debug_mode) {
-        print_ast(g_ast_root, 0);
-    }
+    printf("=== Abstract Syntax Tree ===\n");
+    ast_print(ast_root, 0);
+    printf("\n");
 
-    int sem_errs = semantic_analyze(g_ast_root);
-    if (debug_mode) {
-        symtab_print();
-    }
-    if (sem_errs > 0) {
-        fprintf(stderr, "Compilation failed: %d semantic error(s).\n", sem_errs);
-        free_ast(g_ast_root);
-        symtab_free();
+    semantic_errors = semantic_analyze(ast_root);
+    if (semantic_errors > 0 || error_get_count() > 0) {
+        fprintf(stderr, "\nCompilation aborted due to semantic errors.\n");
+        ast_free(ast_root);
         return 1;
     }
 
-    TACList *tac = codegen_generate(g_ast_root);
-    tac = optimize_tac(tac);
+    printf("=== Semantic Analysis: PASSED ===\n\n");
 
-    if (tac_save("output.tac", tac) != 0) {
-        free_ast(g_ast_root);
-        tac_free(tac);
-        symtab_free();
+    tac = codegen_generate(ast_root);
+    if (!tac) {
+        fprintf(stderr, "Error: TAC generation failed.\n");
+        ast_free(ast_root);
         return 1;
     }
-    printf("TAC written to output.tac\n");
 
-    if (debug_mode) {
-        printf("\n--- Optimized TAC ---\n");
-        tac_print(stdout, tac);
-    }
+    printf("=== Generated TAC (before optimization) ===\n");
+    tac_print(tac, stdout);
+    printf("\n");
 
-    if (target_generate(tac, "output.asm") != 0) {
-        free_ast(g_ast_root);
-        tac_free(tac);
-        symtab_free();
+    optimizer_run(tac);
+
+    printf("=== Optimized TAC ===\n");
+    tac_print(tac, stdout);
+    printf("\n");
+
+    tac_file = fopen("output.tac", "w");
+    if (!tac_file) {
+        fprintf(stderr, "Error: Cannot create output.tac\n");
+        tac_list_free(tac);
+        ast_free(ast_root);
         return 1;
     }
-    printf("Target code written to output.asm\n");
-    printf("Compilation successful.\n");
+    tac_print(tac, tac_file);
+    fclose(tac_file);
 
-    free_ast(g_ast_root);
-    tac_free(tac);
-    symtab_free();
+    asm_file = fopen("output.asm", "w");
+    if (!asm_file) {
+        fprintf(stderr, "Error: Cannot create output.asm\n");
+        tac_list_free(tac);
+        ast_free(ast_root);
+        return 1;
+    }
+    targetcode_generate(tac, asm_file);
+    fclose(asm_file);
+
+    printf("=== Output Files ===\n");
+    printf("  output.tac - Three-address code\n");
+    printf("  output.asm - Pseudo assembly\n");
+    printf("\nCompilation successful.\n");
+
+    tac_list_free(tac);
+    ast_free(ast_root);
     return 0;
 }
