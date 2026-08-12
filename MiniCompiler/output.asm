@@ -2,22 +2,10 @@
 ; Machine-independent target code
 
 LOAD_IMM 10
-STORE x
-LOAD_IMM 5
-STORE y
-LOAD x
-GT y
-STORE t0
-LOAD t0
-STORE flag
-LOAD flag
-JZ Lelse0
-LOAD x
+STORE outer_var
+LOAD_IMM 20
+STORE outer_var
+LOAD outer_var
 PRINT
-JMP Lend1
-Lelse0:
-LOAD y
-PRINT
-Lend1:
 
 HALT
