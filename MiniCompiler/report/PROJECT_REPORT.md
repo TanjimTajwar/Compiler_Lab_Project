@@ -1,32 +1,35 @@
 # MiniLang Compiler
 
-A complete compiler for **MiniLang**, a small statically typed imperative language, implemented using **Flex**, **Bison**, and **C**.
+A complete compiler for **MiniLang**, a small statically typed imperative language implemented using **Flex**, **Bison**, and **C**.
 
-The compiler performs:
+The project also includes a **Java Swing desktop interface** for writing, browsing, compiling, and inspecting MiniLang programs through a clean graphical interface.
 
-* Lexical Analysis
-* Syntax Analysis (LALR(1))
-* AST Construction
-* Semantic Analysis
-* Three-Address Code (TAC) Generation
-* TAC Optimization
-* Pseudo-Assembly Generation
+The compiler performs the following phases:
 
-### Outputs
+- Lexical Analysis
+- LALR(1) Syntax Analysis
+- Abstract Syntax Tree Construction
+- Symbol Table Management
+- Semantic Analysis
+- Three-Address Code Generation
+- TAC Optimization
+- Pseudo-Assembly Generation
 
-* `output.tac` — Optimized intermediate code
-* `output.asm` — Pseudo assembly code
+## Generated Outputs
+
+- `output.tac`: optimized three-address intermediate code
+- `output.asm`: machine-independent pseudo-assembly code
 
 ---
 
 ## Team Members
 
-| Name                    | ID       |
-| ----------------------- | -------- |
-| Tanjim Tajwar Arnab     | 22701066 |
+| Name | Student ID |
+|---|---:|
+| Tanjim Tajwar Arnab | 22701066 |
 | Hafiz Hasnat Sifat Jami | 22701068 |
-| Muznabin Ahmed          | 22701069 |
-| Monir Hossain           | 21701009 |
+| Muznabin Ahmed | 22701069 |
+| Monir Hossain | 21701009 |
 
 ---
 
@@ -34,53 +37,89 @@ The compiler performs:
 
 ### Supported Language Constructs
 
-* `int`, `bool`
-* Variable declarations
-* Assignment statements
-* Arithmetic expressions (`+`, `-`, `*`, `/`)
-* Relational expressions (`<`, `>`, `<=`, `>=`, `==`, `!=`)
-* Unary operators (`-`, `!`)
-* `if`
-* `if-else`
-* `while`
-* `print()`
-* Nested block scopes `{ }`
+The current MiniLang compiler supports:
+
+- `int` and `bool` data types
+- Variable declarations
+- Assignment statements
+- Arithmetic operators:
+  - `+`
+  - `-`
+  - `*`
+  - `/`
+- Relational operators:
+  - `<`
+  - `>`
+  - `<=`
+  - `>=`
+  - `==`
+  - `!=`
+- Unary minus: `-expression`
+- Logical NOT: `!expression`
+- `if` statements
+- `if-else` statements
+- `while` loops
+- `print(expression)` statements
+- Nested block scopes using `{ }`
+- Single-line comments using `//`
+- Multi-line comments using `/* ... */`
+
+### Current Declaration Syntax
+
+Variable declaration and initialization are separate statements in the current MiniLang grammar.
+
+Valid MiniLang syntax:
+
+```c
+int arnab_value;
+arnab_value = 0;
+```
+
+The following C-style declaration with initialization is not currently supported:
+
+```c
+int arnab_value = 0;
+```
+
+The parser reports a syntax error for this statement because it expects a semicolon immediately after the identifier in a declaration.
 
 ### Not Supported
 
-* Arrays
-* Functions
-* Pointers
-* Floating-point values
-* Strings
+The current language does not support:
+
+- Arrays
+- Functions and procedures
+- Pointers
+- Floating-point values
+- String literals
 
 ---
 
 ## Compiler Pipeline
 
 ```text
-MiniLang Source
-       |
-       v
+MiniLang Source File (.ml)
+          |
+          v
 Lexical Analysis (Flex)
-       |
-       v
+          |
+          v
 Syntax Analysis (Bison)
-       |
-       v
+          |
+          v
 Abstract Syntax Tree
-       |
-       v
-Semantic Analysis
-       |
-       v
-Three-Address Code
-       |
-       v
-Optimization
-       |
-       v
-Pseudo Assembly
+          |
+          v
+Semantic Analysis + Symbol Table
+          |
+          v
+Three-Address Code Generation
+          |
+          v
+TAC Optimization
+          |
+          v
+Pseudo-Assembly Generation
 ```
 
 ---
@@ -89,33 +128,74 @@ Pseudo Assembly
 
 ```text
 MiniCompiler/
-├── lexer.l
-├── parser.y
-├── ast.h
-├── ast.c
-├── symbol_table.h
-├── symbol_table.c
-├── semantic.h
-├── semantic.c
-├── codegen.h
-├── codegen.c
-├── optimizer.h
-├── optimizer.c
-├── targetcode.h
-├── targetcode.c
-├── errors.h
-├── errors.c
-├── main.c
-├── Makefile
-├── testcases/
-└── report/
+|-- lexer.l
+|-- parser.y
+|-- ast.h
+|-- ast.c
+|-- symbol_table.h
+|-- symbol_table.c
+|-- semantic.h
+|-- semantic.c
+|-- codegen.h
+|-- codegen.c
+|-- optimizer.h
+|-- optimizer.c
+|-- targetcode.h
+|-- targetcode.c
+|-- errors.h
+|-- errors.c
+|-- main.c
+|-- Makefile
+|-- Run.text
+|-- testcases/
+|-- report/
+|   `-- PROJECT_REPORT.md
+|-- ui-java/
+|   |-- WelcomeScreen.java
+|   |-- CompilerUI.java
+|   `-- assets/
+`-- ui/
 ```
+
+The `ui-java/` directory contains the final Java Swing interface.
+
+The `ui/` directory contains the earlier Flask-based user-interface experiment.
+
+---
+
+## Automatically Generated Files
+
+The following files are generated during building or execution:
+
+```text
+lex.yy.c
+parser.tab.c
+parser.tab.h
+minicompiler.exe
+output.tac
+output.asm
+temp.ml
+```
+
+### Generated File Details
+
+| File | Generated By | Purpose |
+|---|---|---|
+| `lex.yy.c` | Flex | Generated lexical analyzer source |
+| `parser.tab.c` | Bison | Generated parser source |
+| `parser.tab.h` | Bison | Generated parser token declarations |
+| `minicompiler.exe` | GCC and Make | Compiled Windows executable |
+| `output.tac` | MiniLang compiler | Optimized three-address code |
+| `output.asm` | MiniLang compiler | Generated pseudo-assembly |
+| `temp.ml` | Java Swing UI | Temporary MiniLang source submitted through the UI |
+
+These files do not need to be edited manually.
 
 ---
 
 ## Build Requirements
 
-The following tools are required:
+The compiler requires the following tools:
 
 ```text
 gcc
@@ -124,7 +204,60 @@ bison
 make
 ```
 
+The Java Swing interface additionally requires:
+
+```text
+java
+javac
+```
+
+---
+
+## Windows Environment Setup
+
+The compiler was built and tested on Windows using **MSYS2 UCRT64**.
+
+### Install MSYS2
+
+Download MSYS2 from:
+
+```text
+https://www.msys2.org/
+```
+
+After installation, open the following terminal from the Windows Start Menu:
+
+```text
+MSYS2 UCRT64
+```
+
+### Update MSYS2
+
+Run:
+
+```bash
+pacman -Syu
+```
+
+If the terminal asks to close, close it and open **MSYS2 UCRT64** again.
+
+Then run:
+
+```bash
+pacman -Su
+```
+
+### Install Compiler Tools
+
+Run:
+
+```bash
+pacman -S mingw-w64-ucrt-x86_64-gcc flex bison make
+```
+
 ### Verify Installation
+
+Run these commands in the MSYS2 UCRT64 terminal:
 
 ```bash
 gcc --version
@@ -133,93 +266,337 @@ bison --version
 make --version
 ```
 
+Each command should display its installed version.
+
 ---
 
-## Compilation
+## Java Installation
 
-Build the compiler using:
+The Java Swing interface requires a Java Development Kit.
+
+Verify Java from PowerShell:
+
+```powershell
+java -version
+javac -version
+```
+
+Both commands must display version information.
+
+If `java` works but `javac` does not, install a complete Java Development Kit rather than only a Java Runtime Environment.
+
+---
+
+## Building the Compiler
+
+Open the MSYS2 UCRT64 terminal and go to the project directory:
+
+```bash
+cd /c/Kurapika/Compiler_Lab_Project/MiniCompiler
+```
+
+Build the compiler:
 
 ```bash
 make
 ```
 
-Expected output:
+A successful Windows build creates:
 
 ```text
-Generating parser...
-Generating scanner...
-Compiling MiniLang compiler...
-Build successful.
+minicompiler.exe
 ```
+
+### Clean Build
+
+To delete generated build files and rebuild the project:
+
+```bash
+make clean
+make
+```
+
+The correct command is:
+
+```bash
+make clean
+```
+
+Do not use:
+
+```text
+clean make
+```
+
+### Flex Warnings
+
+Flex-generated source code may display warnings such as:
+
+```text
+warning: 'input' defined but not used
+warning: 'yyunput' defined but not used
+```
+
+These warnings come from generated Flex functions and do not prevent a successful build.
 
 ---
 
 ## Running the Compiler
 
-To compile a MiniLang program:
+From the project root, run:
 
 ```bash
 ./minicompiler testcases/test1.ml
 ```
 
-The compiler generates:
+On Windows, the following command can also be used:
 
-```text
-output.tac
-output.asm
+```bash
+./minicompiler.exe testcases/test1.ml
 ```
 
-To view the generated files:
+### Expected Compiler Output
+
+A successful compilation displays information such as:
+
+```text
+=== MiniLang Compiler ===
+Compiling: testcases/test1.ml
+
+=== Abstract Syntax Tree ===
+
+=== Semantic Analysis: PASSED ===
+
+=== Generated TAC (before optimization) ===
+
+=== Optimized TAC ===
+
+=== Output Files ===
+  output.tac - Three-address code
+  output.asm - Pseudo assembly
+
+Compilation successful.
+```
+
+---
+
+## Running from the Testcases Directory
+
+Go to the project directory:
+
+```bash
+cd /c/Kurapika/Compiler_Lab_Project/MiniCompiler
+```
+
+Enter the testcases directory:
+
+```bash
+cd testcases
+```
+
+List available tests:
+
+```bash
+ls
+```
+
+Run a test while inside `testcases/`:
+
+```bash
+../minicompiler.exe test1.ml
+```
+
+Return to the project root:
+
+```bash
+cd ..
+```
+
+---
+
+## Viewing Generated Files
+
+After compiling a valid program, view the optimized TAC:
 
 ```bash
 cat output.tac
+```
+
+View the generated pseudo assembly:
+
+```bash
 cat output.asm
 ```
 
 ---
 
-## Example
+## Java Swing Interface
 
-### Input
+The final user interface is implemented using **Java Swing**.
+
+The interface provides a graphical frontend for the existing Flex, Bison, and C compiler core.
+
+### Interface Features
+
+- Welcome screen
+- Project title and team-member information
+- Start Compiler button
+- MiniLang source-code editor
+- Browse `.ml` file option
+- Compile button
+- Clear button
+- Compiler-output panel
+- Separate Three-Address Code panel
+- Separate pseudo-assembly panel
+- Direct execution of `minicompiler.exe`
+- Displays lexical, syntax, and semantic errors
+- Displays AST and compiler-phase output
+- Reads `output.tac`
+- Reads `output.asm`
+
+### Java Interface Structure
+
+```text
+ui-java/
+|-- WelcomeScreen.java
+|-- CompilerUI.java
+`-- assets/
+```
+
+### Compile the Java Interface
+
+Open PowerShell in the Java interface directory:
+
+```powershell
+cd C:\Kurapika\Compiler_Lab_Project\MiniCompiler\ui-java
+```
+
+Compile both Java files:
+
+```powershell
+javac WelcomeScreen.java CompilerUI.java
+```
+
+### Run the Java Interface
+
+Run:
+
+```powershell
+java WelcomeScreen
+```
+
+The welcome window opens first.
+
+Click:
+
+```text
+Start Compiler
+```
+
+to open the main MiniLang compiler interface.
+
+### Java UI Compilation Flow
+
+```text
+Write Code or Browse .ml File
+              |
+              v
+           temp.ml
+              |
+              v
+      minicompiler.exe
+              |
+              v
+Compiler Output + output.tac + output.asm
+```
+
+### Important Requirement
+
+The Java interface expects the compiler executable to exist here:
+
+```text
+MiniCompiler/minicompiler.exe
+```
+
+If the executable is missing, open MSYS2 UCRT64 and run:
+
+```bash
+cd /c/Kurapika/Compiler_Lab_Project/MiniCompiler
+make
+```
+
+Then run the Java interface again.
+
+---
+
+## Example MiniLang Program
 
 ```c
-int a;
-int b;
-int c;
-int x;
+int arnab_value;
+int jami_value;
+int muznabin_value;
+int monir_result;
 
-a = 2;
-b = 3;
-c = 4;
+arnab_value = 2;
+jami_value = 3;
+muznabin_value = 4;
 
-x = a + b * c;
+monir_result = arnab_value + jami_value * muznabin_value;
 
-print(x);
+print(monir_result);
 ```
+
+### Generated AST Structure
+
+The expression:
+
+```c
+monir_result = arnab_value + jami_value * muznabin_value;
+```
+
+is interpreted as:
+
+```text
+ASSIGN monir_result
+    BINOP +
+        IDENT arnab_value
+        BINOP *
+            IDENT jami_value
+            IDENT muznabin_value
+```
+
+This proves that multiplication has higher precedence than addition.
 
 ### Generated TAC
 
 ```text
-a = 2
-b = 3
-c = 4
-t0 = b * c
-t1 = a + t0
-x = t1
-print x
+arnab_value = 2
+jami_value = 3
+muznabin_value = 4
+t0 = jami_value * muznabin_value
+t1 = arnab_value + t0
+monir_result = t1
+print monir_result
 ```
 
-### Generated Assembly
+### Example Pseudo Assembly
 
 ```text
-LOAD b
-MUL c
+LOAD_IMM 2
+STORE arnab_value
+LOAD_IMM 3
+STORE jami_value
+LOAD_IMM 4
+STORE muznabin_value
+LOAD jami_value
+MUL muznabin_value
 STORE t0
-LOAD a
+LOAD arnab_value
 ADD t0
 STORE t1
 LOAD t1
-STORE x
+STORE monir_result
+LOAD monir_result
 PRINT
 HALT
 ```
@@ -228,102 +605,514 @@ HALT
 
 ## Error Handling
 
-The compiler detects and reports different types of errors.
+The compiler reports lexical, syntax, and semantic errors.
 
-### Lexical Errors
+---
 
-```text
-Lexical error at line 5:
-Invalid character '@'
+### Lexical Error
+
+Input:
+
+```c
+@
 ```
 
-### Syntax Errors
+Example output:
 
 ```text
-Syntax error at line 8:
-Expected ';'
+Lexical error at line 1: Invalid character '@'
+Syntax error at line 1: syntax error, unexpected invalid token, expecting end of file
+
+Compilation aborted due to syntax errors.
 ```
 
-### Semantic Errors
+---
 
-```text
-Semantic error:
-Undeclared variable 'x'
+### Syntax Error
+
+Input:
+
+```c
+int muznabin_value
+muznabin_value = 5;
 ```
 
+Example output:
+
 ```text
-Semantic error:
-Type mismatch in assignment
+Syntax error at line 2: syntax error, unexpected IDENTIFIER, expecting SEMICOLON
+
+Compilation aborted due to syntax errors.
+```
+
+---
+
+### Undeclared Variable
+
+Input:
+
+```c
+arnab_unknown_variable = 5;
+```
+
+Example output:
+
+```text
+Semantic error at line 1: Undeclared variable 'arnab_unknown_variable'
+
+Compilation aborted due to semantic errors.
+```
+
+---
+
+### Duplicate Declaration
+
+Input:
+
+```c
+int jami_duplicate_var;
+int jami_duplicate_var;
+```
+
+Example output:
+
+```text
+Semantic error at line 2: Duplicate declaration of variable 'jami_duplicate_var'
+
+Compilation aborted due to semantic errors.
+```
+
+---
+
+### Type Mismatch
+
+Input:
+
+```c
+int arnab_value;
+bool muznabin_flag;
+
+arnab_value = 10;
+muznabin_flag = arnab_value;
+```
+
+The assignment is rejected because an `int` expression cannot be assigned to a `bool` variable.
+
+---
+
+### Invalid Conditional Expression
+
+Input:
+
+```c
+int arnab_value;
+
+arnab_value = 5;
+
+if (arnab_value)
+{
+    print(arnab_value);
+}
+```
+
+The condition is rejected because `if` and `while` conditions must have the `bool` type.
+
+A valid version is:
+
+```c
+int arnab_value;
+bool muznabin_condition;
+
+arnab_value = 5;
+muznabin_condition = arnab_value > 0;
+
+if (muznabin_condition)
+{
+    print(arnab_value);
+}
 ```
 
 ---
 
 ## Testing
 
-Run all automated tests using:
+### Run Automated Tests
+
+If the Makefile contains the test target:
 
 ```bash
 make test
 ```
 
-To run an individual test:
+### Run an Individual Test
 
 ```bash
-./minicompiler testcases/test1.ml
+./minicompiler.exe testcases/test1.ml
 ```
 
-### Available Test Files
+### Run All Valid Feature Tests
+
+```bash
+for f in testcases/test*.ml
+do
+    echo "====================================="
+    echo "Running: $f"
+    ./minicompiler.exe "$f"
+    echo
+done
+```
+
+### Run All Error Tests
+
+```bash
+for f in testcases/error_*.ml
+do
+    echo "====================================="
+    echo "Running: $f"
+    ./minicompiler.exe "$f"
+    echo
+done
+```
+
+### Run Error Tests Individually
+
+Duplicate declaration:
+
+```bash
+./minicompiler.exe testcases/error_duplicate.ml
+```
+
+Undeclared variable:
+
+```bash
+./minicompiler.exe testcases/error_undeclared.ml
+```
+
+Syntax error:
+
+```bash
+./minicompiler.exe testcases/error_syntax.ml
+```
+
+Lexical error:
+
+```bash
+./minicompiler.exe testcases/error_lexical.ml
+```
+
+---
+
+## Available Test Files
+
+The test suite may include:
 
 ```text
 test1.ml
 test2.ml
 test3.ml
+test_decl.ml
+test_assign.ml
 test_arithmetic.ml
-test_scope.ml
+test_relational.ml
 test_if.ml
+test_if_else.ml
 test_while.ml
+test_scope.ml
+test_bool.ml
+test_complex.ml
+scope_check.ml
 error_lexical.ml
 error_syntax.ml
 error_undeclared.ml
 error_duplicate.ml
 ```
 
+### Tests Covered
+
+- Integer declaration
+- Boolean declaration
+- Assignment
+- Addition
+- Subtraction
+- Multiplication
+- Division
+- Operator precedence
+- Relational expressions
+- Boolean expressions
+- If statements
+- If-else statements
+- While loops
+- Print statements
+- Nested scopes
+- TAC generation
+- Optimization
+- Pseudo-assembly generation
+- Lexical errors
+- Syntax errors
+- Undeclared variables
+- Duplicate declarations
+- Type mismatches
+- Invalid conditions
+
 ---
 
 ## Optimization Passes
 
-The compiler currently implements:
+The current optimizer implements:
 
-* Constant Folding
-* Algebraic Simplification
-* Redundant Temporary Elimination
+- Constant folding
+- Algebraic simplification
+- Redundant temporary elimination
+- Repeated optimization passes up to the configured limit
+
+### Constant Folding
+
+```text
+Before:
+t0 = 2 + 3
+
+After:
+t0 = 5
+```
+
+### Algebraic Simplification
+
+```text
+x + 0  -> x
+0 + x  -> x
+x * 1  -> x
+1 * x  -> x
+x * 0  -> 0
+x - 0  -> x
+x / 1  -> x
+```
+
+### Redundant Temporary Elimination
+
+```text
+Before:
+t0 = arnab_value
+jami_value = t0
+
+After:
+jami_value = arnab_value
+```
 
 ### Planned Optimizations
 
-* Dead Code Elimination
-* Copy Propagation
-* Common Subexpression Elimination
+The following optimizations are planned as future improvements:
+
+- Dead-code elimination
+- Copy propagation
+- Common subexpression elimination
+
+Dead-code elimination is not claimed as a completed optimization pass in the current implementation.
 
 ---
 
 ## Complexity Overview
 
-| Phase                  | Time Complexity    |
-| ---------------------- | ------------------ |
-| Lexical Analysis       | `O(n)`             |
-| Parsing                | `O(t)`             |
-| AST Construction       | `O(e)`             |
-| Semantic Analysis      | `O(e)`             |
-| TAC Generation         | `O(e)`             |
-| Optimization           | `O(i²)` worst case |
-| Target Code Generation | `O(i)`             |
+Let:
 
-Where:
+- `n` = number of source characters
+- `t` = number of tokens
+- `e` = number of AST nodes
+- `s` = number of stored symbols
+- `d` = active scope depth
+- `m` = average number of symbols per scope
+- `i` = number of TAC instructions
 
-* `n` = source characters
-* `t` = tokens
-* `e` = AST nodes
-* `i` = TAC instructions
+| Phase | Time Complexity | Space Complexity |
+|---|---:|---:|
+| Lexical Analysis | `O(n)` | `O(1)` auxiliary |
+| Syntax Analysis | `O(t)` | `O(t)` |
+| AST Construction | `O(e)` | `O(e)` |
+| Symbol Insertion | `O(1)` | Included in symbol storage |
+| Symbol Lookup | `O(d x m)` | `O(1)` auxiliary |
+| Semantic Analysis | `O(e)` plus symbol lookup costs | `O(s)` |
+| TAC Generation | `O(e)` | `O(i)` |
+| Optimization | `O(i^2)` worst case | `O(i)` |
+| Target-Code Generation | `O(i)` | `O(1)` auxiliary when streamed |
+
+Overall worst-case time:
+
+```text
+O(n + i^2)
+```
+
+Overall space:
+
+```text
+O(e + i + s)
+```
+
+For typical small MiniLang test programs, the compiler behaves close to linearly outside the worst-case temporary-propagation optimization.
+
+---
+
+## Project Contributions
+
+The following section records the primary contribution of each project member.
+
+All four members also participated in integration, debugging, testing, documentation, and presentation preparation.
+
+---
+
+### Tanjim Tajwar Arnab
+
+**Student ID:** `22701066`
+
+#### Primary Files and Deliverables
+
+- `lexer.l`
+- `parser.y`
+- `ui-java/WelcomeScreen.java`
+- `ui-java/CompilerUI.java`
+- `main.c`
+- `Makefile`
+- `optimizer.c`
+- `optimizer.h`
+- `semantic.c`
+- `semantic.h`
+
+#### Primary Responsibilities
+
+- Flex lexical analyzer
+- Bison syntax analyzer and grammar
+- Java Swing welcome screen
+- Java Swing compiler interface
+- Compiler-phase integration
+- Build automation
+- TAC optimization
+- Semantic analysis
+- Type checking
+
+#### Secondary Contributions
+
+- Testing and debugging across compiler phases
+- Documentation support
+- Presentation support
+- Integration of the Java Swing UI with `minicompiler.exe`
+
+---
+
+### Hafiz Hasnat Sifat Jami
+
+**Student ID:** `22701068`
+
+#### Primary Files and Deliverables
+
+- `codegen.c`
+- `codegen.h`
+- `targetcode.c`
+- `targetcode.h`
+- Presentation slides
+- Valid non-error test cases
+
+#### Primary Responsibilities
+
+- Three-address code generation
+- Intermediate representation design
+- Temporary generation
+- Label generation
+- Control-flow TAC
+- Pseudo-assembly generation
+- Presentation-slide preparation
+- Valid feature-test preparation
+
+#### Secondary Contributions
+
+- TAC testing
+- Optimizer testing
+- Integration support
+- Debugging support
+- Documentation support
+- Viva preparation
+
+---
+
+### Muznabin Ahmed
+
+**Student ID:** `22701069`
+
+#### Primary Files and Deliverables
+
+- `ast.c`
+- `ast.h`
+- `symbol_table.c`
+- `symbol_table.h`
+- Project report
+- Error-handling test cases
+- CSS design
+
+#### Primary Responsibilities
+
+- AST design
+- AST construction
+- AST traversal
+- AST printing and cleanup
+- Symbol-table implementation
+- Nested scope management
+- Technical report preparation
+- Lexical error test preparation
+- Syntax error test preparation
+- Semantic error test preparation
+- CSS styling for the earlier web-interface experiment
+
+#### Secondary Contributions
+
+- Optimization testing
+- Debugging support
+- Integration support
+- Documentation support
+- Presentation preparation
+
+---
+
+### Monir Hossain
+
+**Student ID:** `21701009`
+
+#### Primary Files and Deliverables
+
+- Environment setup
+- `errors.c`
+- `errors.h`
+- `Run.text`
+- Compiler execution and checking
+- Error handling
+
+#### Primary Responsibilities
+
+- Windows and MSYS2 environment setup
+- Required compiler-tool installation
+- Error-reporting support
+- Run and build instruction preparation
+- Running and checking the compiler
+- Validating compiler output
+- Testing error handling
+
+#### Secondary Contributions
+
+- Integration testing
+- Build verification
+- Execution verification
+- Documentation support
+- Presentation support
+
+---
+
+## Shared Team Responsibilities
+
+All four members participated in:
+
+- Integration of compiler phases
+- Preparation and execution of test cases
+- Debugging and issue resolution
+- Technical documentation
+- Complexity analysis
+- Presentation preparation
+- Viva preparation
 
 ---
 
@@ -337,16 +1126,45 @@ report/PROJECT_REPORT.md
 
 The report covers:
 
-* Language Design
-* Grammar Specification
-* AST Design
-* Symbol Table Implementation
-* Semantic Analysis
-* TAC Generation
-* Optimization
-* Target Code Generation
-* Complexity Analysis
-* Test Results
+- Language design
+- Lexical analysis
+- Grammar and syntax analysis
+- AST design
+- Symbol-table implementation
+- Semantic analysis
+- TAC generation
+- Optimization
+- Target-code generation
+- Complexity analysis
+- Testing and results
+
+---
+
+## Complete Build and Test Sequence
+
+Run this in MSYS2 UCRT64:
+
+```bash
+cd /c/Kurapika/Compiler_Lab_Project/MiniCompiler
+
+make clean
+make
+
+./minicompiler.exe testcases/test1.ml
+
+cat output.tac
+cat output.asm
+```
+
+Compile and launch the Java Swing interface from PowerShell:
+
+```powershell
+cd C:\Kurapika\Compiler_Lab_Project\MiniCompiler\ui-java
+
+javac WelcomeScreen.java CompilerUI.java
+
+java WelcomeScreen
+```
 
 ---
 
@@ -354,13 +1172,21 @@ The report covers:
 
 Possible future improvements include:
 
-* Hash-based Symbol Table
-* Dead Code Elimination
-* Copy Propagation
-* Function Support
-* Array Support
-* LLVM IR Backend
-* MIPS/x86 Code Generation
+- Hash-based symbol table
+- Dead-code elimination
+- Copy propagation
+- Common subexpression elimination
+- Declaration with initialization
+- Functions and procedures
+- Array support
+- Richer type system
+- LLVM IR backend
+- MIPS code generation
+- x86 code generation
+- Advanced syntax highlighting in the Java Swing editor
+- Line numbers in the source editor
+- Export buttons for TAC and assembly
+- Additional UI themes
 
 ---
 
@@ -368,6 +1194,7 @@ Possible future improvements include:
 
 **Group 13**
 
-Department of Computer Science & Engineering
-University of Chittagong
-Compiler Laboratory Project (CSE 712)
+Department of Computer Science & Engineering  
+University of Chittagong  
+CSE 712: Compiler Laboratory  
+2026
