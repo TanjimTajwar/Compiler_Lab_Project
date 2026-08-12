@@ -1,0 +1,59 @@
+# Go to project folder
+cd /c/Kurapika/Compiler_Lab_Project/MiniCompiler
+
+# Build project
+make
+
+# Clean and rebuild
+make clean
+make
+
+# Run the main complete test
+./minicompiler testcases/test1.ml
+
+# Run all feature tests
+./minicompiler testcases/test_decl.ml
+./minicompiler testcases/test_assign.ml
+./minicompiler testcases/test_arithmetic.ml
+./minicompiler testcases/test_relational.ml
+./minicompiler testcases/test_if.ml
+./minicompiler testcases/test_if_else.ml
+./minicompiler testcases/test_while.ml
+./minicompiler testcases/test_scope.ml
+./minicompiler testcases/test_bool.ml
+./minicompiler testcases/test_complex.ml
+
+# Run all error tests
+echo "===== DUPLICATE DECLARATION ====="
+./minicompiler testcases/error_duplicate.ml
+
+echo
+echo "===== UNDECLARED VARIABLE ====="
+./minicompiler testcases/error_undeclared.ml
+
+echo
+echo "===== SYNTAX ERROR ====="
+./minicompiler testcases/error_syntax.ml
+
+echo
+echo "===== LEXICAL ERROR ====="
+./minicompiler testcases/error_lexical.ml
+
+# View generated TAC
+cat output.tac
+
+# View generated Assembly
+cat output.asm
+
+# Check project files
+ls
+
+# Check test files
+ls testcases
+
+# Final submission check
+make clean
+make
+./minicompiler testcases/test1.ml
+cat output.tac
+cat output.asm
