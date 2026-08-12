@@ -40,4 +40,3 @@ else
 /* Final Prints */
 print(arnab_counter);
 print(jami_sum);
-``

@@ -1,5 +1,8 @@
+# Done by Tanjim Tajwar Arnab
+
+
 # MiniLang Compiler Makefile
-#
+# 
 # Team Members:
 # - Tanjim Tajwar Arnab (22701066)
 # - Hafiz Hasnat Sifat Jami (22701068)
